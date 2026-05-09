@@ -1,0 +1,156 @@
+# Laravel Netsons Deploy
+
+[![Tests](https://github.com/albertoarena/laravel-netsons-deploy/actions/workflows/tests.yml/badge.svg)](https://github.com/albertoarena/laravel-netsons-deploy/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
+Deploy Laravel applications to **Netsons shared hosting** (cPanel, SSD plans) via GitHub Actions, supporting both **FTP upload** and **SSH/git-clone** strategies.
+
+## Features
+
+- Two deployment strategies: **FTP** (incremental sync) and **Git** (server-side clone)
+- Release-based deployments with timestamped directories
+- Zero-downtime release switching via proxy `index.php`
+- Shared `.env` and `storage/` across releases
+- Automatic cache clearing and rebuilding
+- Database migrations on deploy
+- First-deploy seeder support
+- `.htaccess` management for root and public directories
+- Configurable release retention (prune old releases)
+- Works with Netsons SSH (port 65100) and cPanel PHP (`ea-phpXX`)
+
+## Quick Start
+
+### 1. Install the package
+
+```bash
+composer require albertoarena/laravel-netsons-deploy --dev
+```
+
+### 2. Run the installer
+
+```bash
+php artisan netsons:install
+```
+
+This will:
+- Publish the config file to `config/netsons-deploy.php`
+- Show the required GitHub Secrets and Variables
+- Guide you through strategy selection (FTP or Git)
+
+### 3. Configure GitHub Secrets
+
+Add the required secrets to your GitHub repository (Settings > Secrets and variables > Actions). See [GitHub Secrets Reference](docs/github-secrets.md).
+
+### 4. Set up the workflow
+
+Copy the generated workflow stub to `.github/workflows/deploy.yml` and replace all `%%PLACEHOLDER%%` values with your settings.
+
+### 5. Deploy
+
+Trigger the workflow from GitHub Actions > Deploy to Netsons > Run workflow.
+
+## Strategy Comparison
+
+| Feature | FTP | Git |
+|---|---|---|
+| **How it works** | Builds locally, uploads via FTP | Clones repo on server via SSH |
+| **Asset building** | In GitHub Actions runner | In GitHub Actions, uploaded via SCP |
+| **Composer install** | In GitHub Actions runner | On server using Netsons PHP CLI |
+| **Requires on server** | FTP access | Git + SSH access (SSD 30+ plans) |
+| **Transfer method** | Incremental FTP sync | `git clone --depth 1` |
+| **Speed** | Slower (full upload first time) | Faster (shallow clone) |
+| **Best for** | Any Netsons plan | SSD 30+ plans with git |
+
+## Usage as a Reusable GitHub Action
+
+You can also use this as a reusable action in your workflow:
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ... build steps (PHP, Node, assets) ...
+
+      - uses: albertoarena/laravel-netsons-deploy@v1
+        with:
+          strategy: 'git'
+          environment: 'production'
+          deploy-path: 'public_html'
+          ssh-host: ${{ vars.SSH_HOST }}
+          ssh-user: ${{ vars.SSH_USER }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          git-repo: ${{ vars.GIT_REPO }}
+```
+
+See [`action.yml`](action.yml) for all available inputs.
+
+## Artisan Commands
+
+### `netsons:install`
+
+Interactive setup wizard. Publishes config, shows required secrets/variables.
+
+```bash
+php artisan netsons:install
+php artisan netsons:install --strategy=git
+```
+
+### `netsons:check`
+
+Validates your configuration and shows readiness status.
+
+```bash
+php artisan netsons:check
+```
+
+## Configuration
+
+The config file `config/netsons-deploy.php` covers:
+
+- **Strategy** — `ftp` or `git`
+- **SSH** — host, port (default 65100), user
+- **PHP binary** — remote path (default `/usr/local/bin/ea-php84`)
+- **Deploy path** — remote directory (default `public_html`)
+- **FTP** — host, port, user, password, protocol
+- **Git** — repo URL, branch
+- **Releases** — number to keep (default 5)
+- **Post-deploy** — toggle migrations, cache rebuilding, queue restart
+- **Seeders** — classes to run on first deploy
+
+See [Configuration Reference](docs/configuration.md) for details.
+
+## Documentation
+
+- [Configuration Reference](docs/configuration.md)
+- [FTP Strategy Guide](docs/ftp-strategy.md)
+- [Git Strategy Guide](docs/git-strategy.md)
+- [Netsons Setup Guide](docs/netsons-setup.md)
+- [GitHub Secrets Reference](docs/github-secrets.md)
+- [Troubleshooting](docs/troubleshooting.md)
+
+## Requirements
+
+- PHP 8.2+
+- Laravel 10, 11, 12, or 13
+- GitHub Actions
+- Netsons shared hosting (cPanel, SSD plans)
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Write tests for your changes
+4. Ensure all tests pass (`composer test`)
+5. Commit your changes
+6. Push to the branch
+7. Open a pull request
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.
