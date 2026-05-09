@@ -302,6 +302,24 @@ Follow INSTRUCTIONS.md for the step-by-step build plan. Summary:
 - Keep first line under 50 characters
 - Use heredoc for multi-line commit messages
 
+## Documentation Website
+
+The documentation site lives in `website/` and is deployed to GitHub Pages at `https://albertoarena.github.io/laravel-netsons-deploy/`.
+
+- **Tech stack:** Astro + Starlight
+- **Deploy workflow:** `.github/workflows/deploy-docs.yml` (auto-deploys on push to main when `website/**` changes)
+- **Local dev:** `cd website && npm run dev`
+
+### Keeping docs in sync
+
+When making changes to the package (new features, config changes, command updates, strategy changes), **always update**:
+
+1. **`README.md`** — keep the public README in sync with any feature, config, or command changes
+2. **`docs/`** — update the relevant markdown files in the docs folder
+3. **`website/src/content/docs/`** — update the corresponding `.mdx` pages on the documentation website
+
+This applies to all changes: new options, renamed parameters, updated defaults, new commands, removed features, etc. The README and docs site must always reflect the current state of the package.
+
 ## Important Rules
 
 - **NEVER** include project-specific secrets, API keys, or credentials in any file

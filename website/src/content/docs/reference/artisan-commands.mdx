@@ -1,0 +1,88 @@
+---
+title: Artisan Commands
+description: Reference for netsons:install and netsons:check commands
+---
+
+## netsons:install
+
+Interactive setup wizard for configuring the deployment.
+
+### Usage
+
+```bash
+php artisan netsons:install [--strategy=ftp|git] [--force]
+```
+
+### Options
+
+| Option | Description |
+|---|---|
+| `--strategy=ftp\|git` | Set the deployment strategy (skips interactive prompt) |
+| `--force` | Overwrite existing config file without asking |
+| `--no-interaction` | Run non-interactively (defaults to FTP if no strategy given) |
+
+### What it does
+
+1. Publishes `config/netsons-deploy.php` with the selected strategy
+2. Displays required GitHub Secrets for the chosen strategy
+3. Displays required GitHub Variables
+4. Shows next steps
+
+### Switching strategies
+
+To switch from FTP to Git:
+
+```bash
+php artisan netsons:install --strategy=git --force
+```
+
+This overwrites the config file and updates the strategy default.
+
+### Re-running safely
+
+Without `--force`, the installer will:
+- **Interactive mode** — ask before overwriting an existing config
+- **Non-interactive mode** — skip the overwrite and show the updated secrets/variables
+
+---
+
+## netsons:check
+
+Validates your deployment configuration and shows readiness status.
+
+### Usage
+
+```bash
+php artisan netsons:check
+```
+
+### Output
+
+The command displays:
+- **Configuration** — current settings (strategy, SSH host/port/user, PHP binary, deploy path, releases keep)
+- **Required Secrets** — GitHub secrets needed for the configured strategy
+- **Required Variables** — GitHub variables needed
+- **Validation** — checks for missing or invalid configuration values
+
+### Example output
+
+```
+  Netsons Deploy — Configuration Check
+  ====================================
+
+  Configuration:
+  +---------------+----------------------------+
+  | Setting       | Value                      |
+  +---------------+----------------------------+
+  | Strategy      | git                        |
+  | SSH Host      | (not set)                  |
+  | SSH Port      | 65100                      |
+  | PHP Binary    | /usr/local/bin/ea-php84    |
+  | Deploy Path   | public_html                |
+  | Releases Keep | 5                          |
+  +---------------+----------------------------+
+
+  Validation Issues:
+    - SSH host is required.
+    - Git repository URL is required.
+```

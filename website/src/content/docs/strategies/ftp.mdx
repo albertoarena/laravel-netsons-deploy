@@ -1,0 +1,69 @@
+---
+title: FTP Strategy
+description: Deploy via incremental FTP upload
+---
+
+The FTP strategy builds your application in the GitHub Actions runner and uploads it to the server via FTP.
+
+## How It Works
+
+1. **Build** — GitHub Actions installs Composer dependencies and builds Node assets
+2. **Prepare** — A new release directory is created on the server via SSH, copying the current release as a base
+3. **Upload** — [SamKirkland/FTP-Deploy-Action](https://github.com/SamKirkland/FTP-Deploy-Action) syncs files incrementally
+4. **Post-deploy** — Symlinks are set up, migrations run, caches rebuilt
+5. **Switch** — The `current` symlink is updated to point to the new release
+6. **Cleanup** — Old releases beyond the keep count are removed
+
+## When to Use
+
+- Works on **all Netsons plans** (no git required on server)
+- Good for projects where you want full control over what gets uploaded
+- First deploy is slower (full upload), subsequent deploys are incremental
+
+## Required Secrets & Variables
+
+See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/) for the complete list. FTP strategy additionally requires `FTP_HOST`, `FTP_USER`, `FTP_PASS`, and `FTP_PORT` secrets.
+
+## Server Directory Structure
+
+After deployment, your server will look like:
+
+```
+~/public_html/
+├── .htaccess              # Root rewrite to public/
+├── index.php              # Proxy to active release
+├── current -> releases/20240101120000/
+├── shared/
+│   ├── .env
+│   └── storage/
+└── releases/
+    ├── 20240101120000/    # Current release
+    ├── 20231215100000/    # Previous release
+    └── ...
+```
+
+## FTP Exclusions
+
+The following paths are excluded from the FTP upload:
+
+- `.git*` — Git files and directories
+- `node_modules/` — Node dependencies
+- `tests/` — Test files
+- `.env`, `.env.*` — Environment files
+- `storage/logs/` — Log files
+
+## Configuration
+
+Set the strategy in `config/netsons-deploy.php`:
+
+```php
+'strategy' => env('NETSONS_DEPLOY_STRATEGY', 'ftp'),
+
+'ftp' => [
+    'host' => env('NETSONS_FTP_HOST'),
+    'port' => env('NETSONS_FTP_PORT', 21),
+    'user' => env('NETSONS_FTP_USER'),
+    'password' => env('NETSONS_FTP_PASS'),
+    'protocol' => env('NETSONS_FTP_PROTOCOL', 'ftp'),
+],
+```

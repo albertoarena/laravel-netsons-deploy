@@ -1,0 +1,101 @@
+---
+title: Netsons Setup
+description: Configure SSH, FTP, and PHP on your Netsons cPanel hosting
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## SSH Access
+
+### 1. Generate an SSH Key Pair
+
+```bash
+ssh-keygen -t ed25519 -C "deploy@your-domain.com"
+```
+
+This creates:
+- `~/.ssh/id_ed25519` — private key (keep secret)
+- `~/.ssh/id_ed25519.pub` — public key (upload to server)
+
+### 2. Upload to Netsons cPanel
+
+1. Log in to your Netsons cPanel
+2. Go to **Security > SSH Access**
+3. Click **Manage SSH Keys > Import Key**
+4. Paste the contents of your public key
+5. Click **Import**
+6. Go back and click **Manage** next to the key
+7. Click **Authorize**
+
+### 3. Test the connection
+
+```bash
+ssh -p 65100 your-user@your-server.netsons.com
+```
+
+:::caution
+Netsons uses port **65100** for SSH, not the standard port 22.
+:::
+
+### 4. Get the Known Hosts entry
+
+```bash
+ssh-keyscan -p 65100 your-server.netsons.com
+```
+
+Save the output — you'll need it for the `SSH_KNOWN_HOSTS` GitHub secret.
+
+## FTP Access
+
+FTP credentials are typically the same as your cPanel login:
+
+| Setting | Value |
+|---|---|
+| Host | `your-server.netsons.com` |
+| Port | `21` |
+| Username | Your cPanel username |
+| Password | Your cPanel password |
+
+You can also create a dedicated FTP account in cPanel > Files > FTP Accounts.
+
+## PHP Version
+
+### Check available versions
+
+```bash
+ssh -p 65100 user@server "ls /usr/local/bin/ea-php*"
+```
+
+Common paths:
+- `/usr/local/bin/ea-php82`
+- `/usr/local/bin/ea-php83`
+- `/usr/local/bin/ea-php84`
+
+### Set PHP version in cPanel
+
+1. Go to **Software > MultiPHP Manager**
+2. Select your domain
+3. Choose the desired PHP version
+4. Click **Apply**
+
+:::note
+The cPanel PHP version affects the web server. For CLI operations (artisan, composer), always use the full path like `/usr/local/bin/ea-php84`.
+:::
+
+## Composer
+
+Composer is typically at `/opt/cpanel/composer/bin/composer`. Always invoke it with the correct PHP binary:
+
+```bash
+/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer --version
+```
+
+## Git (SSD 30+ Plans)
+
+Check if git is available:
+
+```bash
+ssh -p 65100 user@server "git --version"
+```
+
+Git is available on SSD 30+ plans. Lower plans must use the [FTP strategy](/laravel-netsons-deploy/strategies/ftp/).

@@ -1,0 +1,71 @@
+---
+title: Laravel Netsons Deploy
+description: Deploy Laravel applications to Netsons shared hosting via GitHub Actions
+template: splash
+hero:
+  tagline: Deploy Laravel apps to Netsons shared hosting with zero-downtime releases, FTP or Git strategies, and fully automated GitHub Actions workflows.
+  actions:
+    - text: Get Started
+      link: /laravel-netsons-deploy/getting-started/installation/
+      icon: right-arrow
+      variant: primary
+    - text: Strategies
+      link: /laravel-netsons-deploy/strategies/ftp/
+      variant: secondary
+    - text: View on GitHub
+      link: https://github.com/albertoarena/laravel-netsons-deploy
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why Laravel Netsons Deploy?
+
+Deploying Laravel to Netsons shared hosting requires dealing with non-standard SSH ports, EasyApache PHP paths, and cPanel constraints. This package handles all of it — so you just push and deploy.
+
+<CardGrid stagger>
+  <Card title="Two Strategies" icon="list-format">
+    Choose **FTP** (incremental upload) for any plan, or **Git** (server-side clone) for SSD 30+ plans. Switch between them at any time.
+  </Card>
+  <Card title="Zero-Downtime Releases" icon="rocket">
+    Timestamped release directories with atomic symlink switching. Rolling back is a single command.
+  </Card>
+  <Card title="Automated Post-Deploy" icon="setting">
+    Migrations, cache clearing, config/route/view caching, and queue restarts — all handled automatically after each deploy.
+  </Card>
+  <Card title="Shared Resources" icon="document">
+    `.env` and `storage/` are shared across releases via symlinks. First-deploy seeders run once and never again.
+  </Card>
+  <Card title="Reusable GitHub Action" icon="approve-check">
+    Use as a Composer package with Artisan commands, or as a standalone reusable GitHub Action in any workflow.
+  </Card>
+  <Card title="Netsons-Aware" icon="warning">
+    Handles SSH port 65100, `ea-phpXX` binary paths, cPanel Composer, and `public_html` document root out of the box.
+  </Card>
+</CardGrid>
+
+---
+
+## Strategy Comparison
+
+| Feature | FTP | Git |
+|---|---|---|
+| **How it works** | Builds locally, uploads via FTP | Clones repo on server via SSH |
+| **Asset building** | In GitHub Actions runner | In GitHub Actions, uploaded via SCP |
+| **Composer install** | In GitHub Actions runner | On server using Netsons PHP CLI |
+| **Requires on server** | FTP access | Git + SSH access (SSD 30+) |
+| **Speed** | Slower first deploy, incremental after | Fast (shallow clone) |
+
+---
+
+## Next Steps
+
+<CardGrid>
+  <Card title="Installation" icon="rocket">
+    [Install the package](/laravel-netsons-deploy/getting-started/installation/) and run the setup wizard in under a minute.
+  </Card>
+  <Card title="Netsons Setup" icon="setting">
+    [Configure SSH keys and PHP](/laravel-netsons-deploy/getting-started/netsons-setup/) on your Netsons cPanel hosting.
+  </Card>
+</CardGrid>

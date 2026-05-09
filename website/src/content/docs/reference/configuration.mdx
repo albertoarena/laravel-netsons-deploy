@@ -1,0 +1,137 @@
+---
+title: Configuration
+description: Full reference for config/netsons-deploy.php
+---
+
+The configuration file is published to `config/netsons-deploy.php`.
+
+## Strategy
+
+```php
+'strategy' => env('NETSONS_DEPLOY_STRATEGY', 'ftp'),
+```
+
+Choose between `ftp` or `git`. See [FTP Strategy](/laravel-netsons-deploy/strategies/ftp/) and [Git Strategy](/laravel-netsons-deploy/strategies/git/).
+
+## SSH
+
+```php
+'ssh' => [
+    'host' => env('NETSONS_SSH_HOST'),
+    'port' => env('NETSONS_SSH_PORT', 65100),
+    'user' => env('NETSONS_SSH_USER'),
+],
+```
+
+Port defaults to `65100` — the standard SSH port on Netsons shared hosting.
+
+## PHP Binary
+
+```php
+'php_binary' => env('NETSONS_PHP_BINARY', '/usr/local/bin/ea-php84'),
+```
+
+Common values: `/usr/local/bin/ea-php82`, `ea-php83`, `ea-php84`.
+
+## Deploy Path
+
+```php
+'deploy_path' => env('NETSONS_DEPLOY_PATH', 'public_html'),
+```
+
+Remote directory relative to your home directory.
+
+## FTP Settings
+
+```php
+'ftp' => [
+    'host' => env('NETSONS_FTP_HOST'),
+    'port' => env('NETSONS_FTP_PORT', 21),
+    'user' => env('NETSONS_FTP_USER'),
+    'password' => env('NETSONS_FTP_PASS'),
+    'protocol' => env('NETSONS_FTP_PROTOCOL', 'ftp'),
+],
+```
+
+Only used with the FTP strategy.
+
+## Git Settings
+
+```php
+'git' => [
+    'repo' => env('NETSONS_GIT_REPO'),
+    'branch' => env('NETSONS_GIT_BRANCH', 'main'),
+],
+```
+
+Only used with the Git strategy. Use SSH format for the repo URL.
+
+## Release Management
+
+```php
+'releases' => [
+    'keep' => env('NETSONS_RELEASES_KEEP', 5),
+],
+```
+
+Number of releases to retain. Older releases are removed after each deployment.
+
+## .htaccess
+
+```php
+'htaccess' => [
+    'root' => true,
+    'public' => true,
+],
+```
+
+- **root** — rewrites all requests to the `public/` subdirectory
+- **public** — ensures Laravel's rewrite rules are in `public/.htaccess`
+
+## Environments
+
+```php
+'environments' => [
+    'stage' => ['htaccess_root' => true],
+    'production' => ['htaccess_root' => true],
+],
+```
+
+Per-environment overrides.
+
+## .env Mapping
+
+```php
+'env_mapping' => [
+    // 'DB_PASSWORD' => 'PROD_DB_PASSWORD',
+],
+```
+
+Maps `.env` keys to GitHub secret names for injection during deployment.
+
+## Post-Deploy
+
+```php
+'post_deploy' => [
+    'clear_cache' => true,
+    'migrate' => true,
+    'cache_config' => true,
+    'cache_routes' => true,
+    'cache_views' => true,
+    'cache_events' => true,
+    'queue_restart' => true,
+],
+```
+
+Toggle individual post-deploy steps.
+
+## Seeders
+
+```php
+'seeders' => [
+    // 'RoleSeeder',
+    // 'PermissionSeeder',
+],
+```
+
+Run on the **first deploy only**. A `.first_deploy` flag file controls this.

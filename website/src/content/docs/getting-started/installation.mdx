@@ -1,0 +1,83 @@
+---
+title: Installation
+description: Install and configure the Laravel Netsons Deploy package
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+## Requirements
+
+- PHP 8.2 or higher
+- Laravel 10, 11, 12, or 13
+- GitHub Actions (for deployment)
+- Netsons shared hosting (cPanel, SSD plans)
+
+## Install via Composer
+
+```bash
+composer require albertoarena/laravel-netsons-deploy --dev
+```
+
+The service provider is auto-discovered by Laravel.
+
+## Run the installer
+
+<Tabs>
+  <TabItem label="Interactive">
+    ```bash
+    php artisan netsons:install
+    ```
+    The wizard will ask you to choose a strategy and guide you through setup.
+  </TabItem>
+  <TabItem label="Non-interactive">
+    ```bash
+    php artisan netsons:install --strategy=ftp
+    # or
+    php artisan netsons:install --strategy=git
+    ```
+  </TabItem>
+</Tabs>
+
+The installer will:
+1. Publish `config/netsons-deploy.php`
+2. Set the strategy in the config file
+3. Display required GitHub Secrets and Variables
+
+## Verify your setup
+
+```bash
+php artisan netsons:check
+```
+
+This shows your current configuration, lists required secrets/variables, and validates your setup.
+
+## Re-running the installer
+
+If you need to change strategies or re-publish the config:
+
+```bash
+# Overwrite existing config
+php artisan netsons:install --strategy=git --force
+
+# Interactive — will ask before overwriting
+php artisan netsons:install
+```
+
+## Using as a GitHub Action
+
+You can also use this package as a reusable GitHub Action without installing it via Composer:
+
+```yaml
+- uses: albertoarena/laravel-netsons-deploy@v1
+  with:
+    strategy: 'git'
+    environment: 'production'
+    deploy-path: 'public_html'
+    ssh-host: ${{ vars.SSH_HOST }}
+    ssh-user: ${{ vars.SSH_USER }}
+    ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+    ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+    git-repo: ${{ vars.GIT_REPO }}
+```
+
+See [GitHub Action Reference](/laravel-netsons-deploy/reference/github-action/) for all inputs.

@@ -1,0 +1,138 @@
+---
+title: Troubleshooting
+description: Common issues and solutions
+---
+
+## SSH Connection
+
+### "Connection refused" or "Connection timed out"
+
+Netsons uses port **65100** for SSH, not port 22.
+
+```bash
+# Wrong
+ssh user@server.netsons.com
+
+# Correct
+ssh -p 65100 user@server.netsons.com
+```
+
+### "Host key verification failed"
+
+Regenerate your known hosts entry:
+
+```bash
+ssh-keyscan -p 65100 your-server.netsons.com
+```
+
+Copy the full output to the `SSH_KNOWN_HOSTS` secret.
+
+### "Permission denied (publickey)"
+
+1. Verify the key is **authorized** in cPanel > Security > SSH Access
+2. Check `SSH_PRIVATE_KEY` includes the full content (from `-----BEGIN` to `-----END`)
+3. If using a passphrase, ensure `SSH_KEY_PASSPHRASE` is set
+
+## PHP Version
+
+### Wrong PHP version or "command not found"
+
+The default `php` on Netsons may point to an old version. Always use the full path:
+
+```bash
+/usr/local/bin/ea-php84 -v
+```
+
+Check available versions:
+
+```bash
+ssh -p 65100 user@server "ls /usr/local/bin/ea-php*"
+```
+
+## Composer
+
+### "composer: command not found"
+
+Use the full path with the correct PHP binary:
+
+```bash
+/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer install
+```
+
+### "Allowed memory size exhausted"
+
+```bash
+/usr/local/bin/ea-php84 -d memory_limit=-1 /opt/cpanel/composer/bin/composer install
+```
+
+## FTP
+
+### "Login authentication failed"
+
+Verify FTP credentials in cPanel > Files > FTP Accounts.
+
+### Files not updating
+
+The FTP action uses incremental sync. Check that `server-dir` is correct and the FTP user has write permissions.
+
+## Deployment
+
+### Migrations fail
+
+- Check `~/public_html/shared/.env` has correct database credentials
+- Test manually:
+  ```bash
+  ssh -p 65100 user@server "cd ~/public_html/current && /usr/local/bin/ea-php84 artisan migrate:status"
+  ```
+
+### Storage permissions
+
+```bash
+ssh -p 65100 user@server "chmod -R 775 ~/public_html/shared/storage"
+```
+
+### ".env not found" or "APP_KEY not set"
+
+The shared `.env` is created from `.env.example` on first deploy. SSH in and configure it:
+
+```bash
+ssh -p 65100 user@server
+cd ~/public_html/current
+/usr/local/bin/ea-php84 artisan key:generate
+```
+
+Then edit `~/public_html/shared/.env` with your database and other credentials.
+
+## .htaccess
+
+### "500 Internal Server Error"
+
+Check if `mod_rewrite` is enabled (usually enabled by default on Netsons).
+
+### Assets not loading (CSS/JS 404)
+
+Ensure the proxy `index.php` and `.htaccess` are set up. The root `.htaccess` should rewrite to `public/`.
+
+## Release Management
+
+### "No space left on device"
+
+Reduce kept releases:
+
+```yaml
+releases-keep: '3'
+```
+
+### Rolling back
+
+Update the `current` symlink to a previous release:
+
+```bash
+ssh -p 65100 user@server "ln -sfn ~/public_html/releases/PREVIOUS_TIMESTAMP ~/public_html/current"
+```
+
+List available releases:
+
+```bash
+ssh -p 65100 user@server "ls ~/public_html/releases/"
+```

@@ -1,0 +1,133 @@
+---
+title: GitHub Action
+description: Reference for the reusable GitHub Action inputs
+---
+
+Use `albertoarena/laravel-netsons-deploy@v1` as a reusable composite action in your workflow.
+
+## Basic Usage
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # ... your build steps (PHP, Node, assets) ...
+
+      - uses: albertoarena/laravel-netsons-deploy@v1
+        with:
+          strategy: 'git'
+          environment: 'production'
+          deploy-path: 'public_html'
+          ssh-host: ${{ vars.SSH_HOST }}
+          ssh-user: ${{ vars.SSH_USER }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          git-repo: ${{ vars.GIT_REPO }}
+```
+
+## Inputs
+
+### Required
+
+| Input | Description |
+|---|---|
+| `strategy` | Deployment strategy: `ftp` or `git` |
+| `environment` | Target environment: `stage` or `production` |
+| `deploy-path` | Remote deploy path relative to home (e.g., `public_html`) |
+| `ssh-host` | SSH hostname |
+| `ssh-user` | SSH username |
+| `ssh-private-key` | SSH private key content |
+| `ssh-known-hosts` | SSH known hosts entry |
+
+### Optional (General)
+
+| Input | Default | Description |
+|---|---|---|
+| `php-version` | `8.4` | PHP version for build |
+| `node-version` | `22` | Node.js version for build |
+| `package-manager` | `yarn` | Node package manager (`npm` or `yarn`) |
+| `remote-php` | `/usr/local/bin/ea-php84` | Remote PHP binary path |
+| `ssh-port` | `65100` | SSH port |
+| `ssh-key-passphrase` | _(empty)_ | SSH key passphrase |
+| `releases-keep` | `5` | Number of releases to keep |
+
+### FTP Strategy
+
+| Input | Default | Description |
+|---|---|---|
+| `ftp-host` | | FTP hostname |
+| `ftp-port` | `21` | FTP port |
+| `ftp-user` | | FTP username |
+| `ftp-password` | | FTP password |
+
+### Git Strategy
+
+| Input | Default | Description |
+|---|---|---|
+| `git-repo` | | Git repository URL |
+| `git-branch` | `main` | Git branch to deploy |
+
+## What the Action Does
+
+1. **Validates inputs** — checks strategy-specific required inputs
+2. **Sets up SSH** — configures agent, key, and known hosts
+3. **Creates release directory** — timestamped, copies current release as base
+4. **Deploys** — FTP upload or git clone depending on strategy
+5. **Shared resources** — symlinks `.env` and `storage/` from shared directory
+6. **Post-deploy** — runs migrations, clears and rebuilds caches
+7. **Activates release** — updates `current` symlink and proxy `index.php`
+8. **Uploads .htaccess** — root rewrite to `public/`
+9. **Cleans up** — removes old releases beyond keep count
+
+## Workflow Dispatch Example
+
+For manual deployments with environment selection:
+
+```yaml
+name: Deploy to Netsons
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - stage
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+
+      - run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+      - uses: albertoarena/laravel-netsons-deploy@v1
+        with:
+          strategy: 'git'
+          environment: ${{ github.event.inputs.environment }}
+          deploy-path: ${{ vars.DEPLOY_PATH }}
+          ssh-host: ${{ vars.SSH_HOST }}
+          ssh-user: ${{ vars.SSH_USER }}
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh-known-hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
+          git-repo: ${{ vars.GIT_REPO }}
+```

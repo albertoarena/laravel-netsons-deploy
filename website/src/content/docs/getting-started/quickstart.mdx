@@ -1,0 +1,60 @@
+---
+title: Quickstart
+description: Get deploying to Netsons in 5 minutes
+---
+
+## 1. Install the package
+
+```bash
+composer require albertoarena/laravel-netsons-deploy --dev
+```
+
+## 2. Run the installer
+
+```bash
+php artisan netsons:install
+```
+
+This will:
+- Ask you to choose a deployment strategy (FTP or Git)
+- Publish the config file to `config/netsons-deploy.php`
+- Show the required GitHub Secrets and Variables
+
+## 3. Configure GitHub Secrets
+
+Add the required secrets to your GitHub repository under **Settings > Secrets and variables > Actions**. See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/) for the full list.
+
+## 4. Set up the workflow
+
+Copy the workflow stub to `.github/workflows/deploy.yml` and replace all `%%PLACEHOLDER%%` values:
+
+```yaml
+env:
+  STRATEGY: 'git'              # or 'ftp'
+  PHP_VERSION: '8.4'
+  NODE_VERSION: '22'
+  PACKAGE_MANAGER: 'yarn'      # or 'npm'
+  REMOTE_PHP: '/usr/local/bin/ea-php84'
+```
+
+## 5. Deploy
+
+Go to **GitHub Actions > Deploy to Netsons > Run workflow**, select your environment, and deploy.
+
+## 6. Verify
+
+Check your configuration is correct:
+
+```bash
+php artisan netsons:check
+```
+
+## Switching strategies
+
+To switch from FTP to Git (or vice versa):
+
+```bash
+php artisan netsons:install --strategy=git --force
+```
+
+This overwrites the config with the new strategy and shows the updated secrets/variables list.

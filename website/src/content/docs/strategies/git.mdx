@@ -1,0 +1,63 @@
+---
+title: Git Strategy
+description: Deploy via server-side git clone
+---
+
+The Git strategy clones your repository directly on the server via SSH and installs dependencies there.
+
+## How It Works
+
+1. **Build** — GitHub Actions builds Node assets locally
+2. **Clone** — The repo is cloned on the server via SSH (`git clone --depth 1`)
+3. **Install** — Composer dependencies are installed on the server using the Netsons PHP binary
+4. **Upload assets** — Built CSS/JS assets are uploaded via SCP
+5. **Post-deploy** — Symlinks, migrations, caches
+6. **Switch** — Atomic symlink update
+7. **Cleanup** — Old releases pruned
+
+## When to Use
+
+- Requires **SSD 30+ plan** (git must be available on server)
+- Faster deployments (shallow clone instead of full FTP upload)
+- Composer runs on server — ensure the server has enough resources
+
+## Server Requirements
+
+- **Git** — available on SSD 30+ plans
+- **Composer** — typically at `/opt/cpanel/composer/bin/composer`
+- **PHP CLI** — use the full path (e.g., `/usr/local/bin/ea-php84`)
+- **SSH access** — with key authentication
+
+## SSH Key for Git Clone
+
+The server needs SSH access to your GitHub repository. Options:
+
+1. **Deploy key** — add a read-only deploy key to the repo (GitHub > Repository > Settings > Deploy keys)
+2. **SSH key** — use the same key configured for server access
+
+## Composer on Netsons
+
+Composer must be invoked with the correct PHP binary:
+
+```bash
+/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer install --no-dev
+```
+
+The action handles this automatically using the `remote-php` input.
+
+## Configuration
+
+Set the strategy in `config/netsons-deploy.php`:
+
+```php
+'strategy' => env('NETSONS_DEPLOY_STRATEGY', 'git'),
+
+'git' => [
+    'repo' => env('NETSONS_GIT_REPO'),
+    'branch' => env('NETSONS_GIT_BRANCH', 'main'),
+],
+```
+
+## Server Directory Structure
+
+Same layout as FTP — see [FTP Strategy](/laravel-netsons-deploy/strategies/ftp/#server-directory-structure).
