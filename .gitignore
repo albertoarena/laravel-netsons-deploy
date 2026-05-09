@@ -1,0 +1,19 @@
+/vendor
+/node_modules
+.env
+.phpunit.cache
+.phpunit.result.cache
+/coverage
+composer.lock
+.DS_Store
+Thumbs.db
+/.idea
+/.vscode
+/.fleet
+/.zed
+
+# Private documentation (confidential — never commit)
+/.docs
+
+# Claude Code
+/.claude

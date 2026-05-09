@@ -1,0 +1,52 @@
+{
+    "name": "albertoarena/laravel-netsons-deploy",
+    "description": "Deploy Laravel applications to Netsons shared hosting via GitHub Actions (FTP or Git)",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["laravel", "netsons", "deploy", "github-actions", "ftp", "ssh", "cpanel"],
+    "authors": [
+        {
+            "name": "Alberto Arena",
+            "homepage": "https://github.com/albertoarena"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^8.0|^9.0|^10.0|^11.0",
+        "pestphp/pest": "^2.0|^3.0|^4.0",
+        "pestphp/pest-plugin-laravel": "^2.0|^3.0|^4.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "AlbertoArena\\NetsonsDeploy\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AlbertoArena\\NetsonsDeploy\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AlbertoArena\\NetsonsDeploy\\NetsonsDeployServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "test": "pest",
+        "test:coverage": "pest --coverage"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
