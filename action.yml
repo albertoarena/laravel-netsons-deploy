@@ -1,0 +1,271 @@
+name: 'Netsons Deploy'
+description: 'Deploy Laravel applications to Netsons shared hosting via FTP or Git'
+author: 'Alberto Arena'
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
+
+inputs:
+  strategy:
+    description: 'Deployment strategy: ftp or git'
+    required: true
+  environment:
+    description: 'Target environment: stage or production'
+    required: true
+  php-version:
+    description: 'PHP version for build'
+    default: '8.4'
+  node-version:
+    description: 'Node.js version for build'
+    default: '22'
+  package-manager:
+    description: 'Node package manager: npm or yarn'
+    default: 'yarn'
+  remote-php:
+    description: 'Remote PHP binary path on Netsons'
+    default: '/usr/local/bin/ea-php84'
+  deploy-path:
+    description: 'Remote deploy path relative to home'
+    required: true
+  ssh-host:
+    description: 'SSH hostname'
+    required: true
+  ssh-port:
+    description: 'SSH port'
+    default: '65100'
+  ssh-user:
+    description: 'SSH username'
+    required: true
+  ssh-private-key:
+    description: 'SSH private key'
+    required: true
+  ssh-key-passphrase:
+    description: 'SSH key passphrase (if any)'
+    default: ''
+  ssh-known-hosts:
+    description: 'SSH known hosts entry'
+    required: true
+  releases-keep:
+    description: 'Number of releases to keep'
+    default: '5'
+  ftp-host:
+    description: 'FTP hostname (FTP strategy only)'
+    default: ''
+  ftp-port:
+    description: 'FTP port'
+    default: '21'
+  ftp-user:
+    description: 'FTP username (FTP strategy only)'
+    default: ''
+  ftp-password:
+    description: 'FTP password (FTP strategy only)'
+    default: ''
+  git-repo:
+    description: 'Git repository URL (git strategy only)'
+    default: ''
+  git-branch:
+    description: 'Git branch to deploy (git strategy only)'
+    default: 'main'
+
+runs:
+  using: 'composite'
+  steps:
+    # ── Validate inputs ───────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [[ "${{ inputs.strategy }}" != "ftp" && "${{ inputs.strategy }}" != "git" ]]; then
+          echo "::error::Invalid strategy: ${{ inputs.strategy }}. Must be 'ftp' or 'git'."
+          exit 1
+        fi
+        if [[ "${{ inputs.strategy }}" == "ftp" ]]; then
+          if [[ -z "${{ inputs.ftp-host }}" || -z "${{ inputs.ftp-user }}" || -z "${{ inputs.ftp-password }}" ]]; then
+            echo "::error::FTP strategy requires ftp-host, ftp-user, and ftp-password inputs."
+            exit 1
+          fi
+        fi
+        if [[ "${{ inputs.strategy }}" == "git" ]]; then
+          if [[ -z "${{ inputs.git-repo }}" ]]; then
+            echo "::error::Git strategy requires git-repo input."
+            exit 1
+          fi
+        fi
+
+    # ── SSH Setup ─────────────────────────────────────────────────────────
+    - name: Setup SSH
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+        echo "${{ inputs.ssh-private-key }}" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        echo "${{ inputs.ssh-known-hosts }}" >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+        eval "$(ssh-agent -s)"
+        if [ -n "${{ inputs.ssh-key-passphrase }}" ]; then
+          echo "${{ inputs.ssh-key-passphrase }}" | SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key
+        else
+          ssh-add ~/.ssh/deploy_key
+        fi
+
+    # ── Generate release timestamp ────────────────────────────────────────
+    - name: Generate release directory
+      id: release
+      shell: bash
+      run: echo "dir=$(date -u '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
+
+    # ── Create release directory ──────────────────────────────────────────
+    - name: Create release directory
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+          set -euo pipefail
+          cd ~/${{ inputs.deploy-path }}
+          mkdir -p releases/${{ steps.release.outputs.dir }}
+          if [ -L current ]; then
+            cp -a current/. releases/${{ steps.release.outputs.dir }}/
+          fi
+        REMOTE
+
+    # ── Deploy (FTP) ──────────────────────────────────────────────────────
+    - name: Deploy via FTP
+      if: inputs.strategy == 'ftp'
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      with:
+        server: ${{ inputs.ftp-host }}
+        port: ${{ inputs.ftp-port }}
+        username: ${{ inputs.ftp-user }}
+        password: ${{ inputs.ftp-password }}
+        local-dir: ./
+        server-dir: ${{ inputs.deploy-path }}/releases/${{ steps.release.outputs.dir }}/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+          **/tests/**
+          **/.env
+          **/.env.*
+          **/storage/logs/**
+
+    # ── Deploy (Git) ──────────────────────────────────────────────────────
+    - name: Deploy via Git
+      if: inputs.strategy == 'git'
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+          set -euo pipefail
+          cd ~/${{ inputs.deploy-path }}
+          rm -rf releases/${{ steps.release.outputs.dir }}
+          git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 ${{ inputs.git-repo }} releases/${{ steps.release.outputs.dir }}
+          cd releases/${{ steps.release.outputs.dir }}
+          ${{ inputs.remote-php }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          rm -rf .git .github tests
+        REMOTE
+
+        # Upload built assets
+        if [ -d "public/build" ]; then
+          scp -P ${{ inputs.ssh-port }} -r public/build ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:~/${{ inputs.deploy-path }}/releases/${{ steps.release.outputs.dir }}/public/
+        fi
+
+    # ── Shared resources ──────────────────────────────────────────────────
+    - name: Setup shared resources
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+          set -euo pipefail
+          DEPLOY_BASE=~/${{ inputs.deploy-path }}
+          RELEASE_PATH=${DEPLOY_BASE}/releases/${{ steps.release.outputs.dir }}
+
+          mkdir -p ${DEPLOY_BASE}/shared/storage/app/public
+          mkdir -p ${DEPLOY_BASE}/shared/storage/framework/{cache/data,sessions,views}
+          mkdir -p ${DEPLOY_BASE}/shared/storage/logs
+
+          if [ ! -f ${DEPLOY_BASE}/shared/.env ]; then
+            if [ -f ${RELEASE_PATH}/.env.example ]; then
+              cp ${RELEASE_PATH}/.env.example ${DEPLOY_BASE}/shared/.env
+            fi
+            touch ${DEPLOY_BASE}/.first_deploy
+          fi
+
+          rm -f ${RELEASE_PATH}/.env
+          ln -sfn ${DEPLOY_BASE}/shared/.env ${RELEASE_PATH}/.env
+          rm -rf ${RELEASE_PATH}/storage
+          ln -sfn ${DEPLOY_BASE}/shared/storage ${RELEASE_PATH}/storage
+        REMOTE
+
+    # ── Post-deploy (migrations, caches) ──────────────────────────────────
+    - name: Post-deploy
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+          set -euo pipefail
+          cd ~/${{ inputs.deploy-path }}/releases/${{ steps.release.outputs.dir }}
+          ${{ inputs.remote-php }} artisan migrate --force --no-interaction
+          ${{ inputs.remote-php }} artisan cache:clear
+          ${{ inputs.remote-php }} artisan config:cache
+          ${{ inputs.remote-php }} artisan route:cache
+          ${{ inputs.remote-php }} artisan view:cache
+          ${{ inputs.remote-php }} artisan event:cache
+          ${{ inputs.remote-php }} artisan queue:restart 2>/dev/null || true
+        REMOTE
+
+    # ── Switch release ────────────────────────────────────────────────────
+    - name: Activate release
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+          set -euo pipefail
+          DEPLOY_BASE=~/${{ inputs.deploy-path }}
+          RELEASE_PATH=${DEPLOY_BASE}/releases/${{ steps.release.outputs.dir }}
+
+          ln -sfn ${RELEASE_PATH} ${DEPLOY_BASE}/current
+
+          cat > ${DEPLOY_BASE}/index.php <<'PROXY'
+        <?php
+        $releasePath = __DIR__ . '/current';
+        if (file_exists($releasePath . '/storage/framework/maintenance.php')) {
+            require $releasePath . '/storage/framework/maintenance.php';
+        }
+        require $releasePath . '/public/index.php';
+        PROXY
+
+          if [ -d "${RELEASE_PATH}/public/build" ]; then
+            mkdir -p ${DEPLOY_BASE}/public/build
+            cp -r ${RELEASE_PATH}/public/build/* ${DEPLOY_BASE}/public/build/
+          fi
+        REMOTE
+
+    # ── .htaccess ─────────────────────────────────────────────────────────
+    - name: Upload root .htaccess
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+          cat > ~/${{ inputs.deploy-path }}/.htaccess <<'HTACCESS'
+        <IfModule mod_rewrite.c>
+            RewriteEngine On
+            RewriteRule ^$ public/ [L]
+            RewriteRule (.*) public/$1 [L]
+        </IfModule>
+        HTACCESS
+        REMOTE
+
+    # ── Cleanup ───────────────────────────────────────────────────────────
+    - name: Cleanup old releases
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+          set -euo pipefail
+          cd ~/${{ inputs.deploy-path }}/releases
+          TOTAL=\$(ls -1d */ 2>/dev/null | wc -l)
+          if [ "\${TOTAL}" -gt "${{ inputs.releases-keep }}" ]; then
+            REMOVE=\$(( TOTAL - ${{ inputs.releases-keep }} ))
+            ls -1d */ | sort | head -n \${REMOVE} | xargs -I {} rm -rf {}
+            echo "Removed \${REMOVE} old release(s)."
+          fi
+        REMOTE
+
+    # ── Summary ───────────────────────────────────────────────────────────
+    - name: Deployment summary
+      shell: bash
+      run: |
+        echo "::notice::Deployed to ${{ inputs.environment }} — release ${{ steps.release.outputs.dir }}"
