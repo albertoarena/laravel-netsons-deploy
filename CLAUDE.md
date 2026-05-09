@@ -130,6 +130,7 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 - Type hints on all method parameters and return types
 - No dependencies beyond Laravel framework (keep it lightweight)
 - Shell scripts must be POSIX-compatible (sh, not bash-specific) where possible, bash when needed
+- Use TDD approach
 
 ## Config Design (`config/netsons-deploy.php`)
 
