@@ -1,7 +1,7 @@
 # Laravel Netsons Deploy
 
-[![Tests](https://github.com/albertoarena/laravel-netsons-deploy/actions/workflows/tests.yml/badge.svg)](https://github.com/albertoarena/laravel-netsons-deploy/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Docs](https://img.shields.io/badge/docs-website-blue)](https://albertoarena.github.io/laravel-netsons-deploy/)
 
 Deploy Laravel applications to **Netsons shared hosting** (cPanel, SSD plans) via GitHub Actions, supporting both **FTP upload** and **SSH/git-clone** strategies.
 
