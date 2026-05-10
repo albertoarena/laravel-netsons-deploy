@@ -120,7 +120,7 @@ class EnvCommand extends Command
         };
 
         info('Variable added to netsons-deploy.json.');
-        note('Run "php artisan netsons:install --force" to regenerate the workflow.');
+        $this->offerWorkflowRegeneration();
 
         return self::SUCCESS;
     }
@@ -228,9 +228,24 @@ class EnvCommand extends Command
         }
 
         info('Item removed from netsons-deploy.json.');
-        note('Run "php artisan netsons:install --force" to regenerate the workflow.');
+        $this->offerWorkflowRegeneration();
 
         return self::SUCCESS;
+    }
+
+    protected function offerWorkflowRegeneration(): void
+    {
+        if (! $this->input->isInteractive()) {
+            note('Run "php artisan netsons:install --force" to regenerate the workflow.');
+
+            return;
+        }
+
+        if (confirm('Regenerate deploy workflow now?', true)) {
+            $this->call('netsons:install', ['--force' => true, '--no-interaction' => true]);
+        } else {
+            note('Run "php artisan netsons:install --force" to regenerate the workflow.');
+        }
     }
 
     protected function invalidAction(string $action): int

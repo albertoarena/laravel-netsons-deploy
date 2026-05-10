@@ -99,6 +99,7 @@ describe('netsons:env add', function () {
             ])
             ->expectsQuestion('ENV variable name', 'DB_PASSWORD')
             ->expectsQuestion('GitHub Secret name (default: same as ENV name)', 'DB_PASSWORD')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -114,6 +115,7 @@ describe('netsons:env add', function () {
             ])
             ->expectsQuestion('ENV variable name', 'SESSION_DRIVER')
             ->expectsQuestion('Value', 'database')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -129,6 +131,7 @@ describe('netsons:env add', function () {
             ])
             ->expectsQuestion('ENV variable name', 'VITE_APP_NAME')
             ->expectsQuestion('Value', 'My App')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -152,6 +155,7 @@ describe('netsons:env add duplicate detection', function () {
             ->expectsOutputToContain('already configured')
             ->expectsConfirmation('"DB_PASSWORD" is already configured. Update it?', 'yes')
             ->expectsQuestion('GitHub Secret name (default: same as ENV name)', 'NEW_SECRET')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -171,6 +175,7 @@ describe('netsons:env add duplicate detection', function () {
             ])
             ->expectsQuestion('ENV variable name', 'DB_PASSWORD')
             ->expectsConfirmation('"DB_PASSWORD" is already configured. Update it?', 'no')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -192,6 +197,7 @@ describe('netsons:env add duplicate detection', function () {
             ->expectsOutputToContain('already configured')
             ->expectsConfirmation('"SESSION_DRIVER" is already configured. Update it?', 'yes')
             ->expectsQuestion('Value', 'database')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -211,6 +217,7 @@ describe('netsons:env remove', function () {
                 'DB_USERNAME (secret: DB_USERNAME)' => 'DB_USERNAME (secret: DB_USERNAME)',
                 '-- Cancel --' => '-- Cancel --',
             ])
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -228,6 +235,7 @@ describe('netsons:env remove', function () {
                 'command: horizon:terminate' => 'command: horizon:terminate',
                 '-- Cancel --' => '-- Cancel --',
             ])
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -244,6 +252,7 @@ describe('netsons:env remove', function () {
                 'notification: Slack (SLACK_WEBHOOK_DEBUG)' => 'notification: Slack (SLACK_WEBHOOK_DEBUG)',
                 '-- Cancel --' => '-- Cancel --',
             ])
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
 
         $data = json_decode(File::get($this->jsonPath), true);
@@ -266,6 +275,7 @@ describe('netsons:env remove', function () {
                 'notification: Slack (SLACK_WEBHOOK)' => 'notification: Slack (SLACK_WEBHOOK)',
                 '-- Cancel --' => '-- Cancel --',
             ])
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
             ->assertSuccessful();
     });
 
