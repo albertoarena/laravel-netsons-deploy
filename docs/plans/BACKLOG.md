@@ -106,8 +106,9 @@ if (class_exists(\Laravel\Prompts\Prompt::class)) {
 ## B2: Improve interactive env setup UX
 
 **Priority:** UX fix
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 

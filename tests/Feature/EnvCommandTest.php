@@ -136,6 +136,69 @@ describe('netsons:env add', function () {
     });
 });
 
+describe('netsons:env add duplicate detection', function () {
+    it('warns and offers update when secret-backed key already exists', function () {
+        File::put($this->jsonPath, json_encode([
+            'env_mapping' => ['DB_PASSWORD' => 'OLD_SECRET'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'add'])
+            ->expectsChoice('What type of variable?', 'secret', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
+            ])
+            ->expectsQuestion('ENV variable name', 'DB_PASSWORD')
+            ->expectsOutputToContain('already configured')
+            ->expectsConfirmation('"DB_PASSWORD" is already configured. Update it?', 'yes')
+            ->expectsQuestion('GitHub Secret name (default: same as ENV name)', 'NEW_SECRET')
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['env_mapping']['DB_PASSWORD'])->toBe('NEW_SECRET');
+    });
+
+    it('skips when user declines update for existing key', function () {
+        File::put($this->jsonPath, json_encode([
+            'env_mapping' => ['DB_PASSWORD' => 'OLD_SECRET'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'add'])
+            ->expectsChoice('What type of variable?', 'secret', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
+            ])
+            ->expectsQuestion('ENV variable name', 'DB_PASSWORD')
+            ->expectsConfirmation('"DB_PASSWORD" is already configured. Update it?', 'no')
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['env_mapping']['DB_PASSWORD'])->toBe('OLD_SECRET');
+    });
+
+    it('warns and offers update when static key already exists', function () {
+        File::put($this->jsonPath, json_encode([
+            'env_static' => ['SESSION_DRIVER' => 'file'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'add'])
+            ->expectsChoice('What type of variable?', 'static', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
+            ])
+            ->expectsQuestion('ENV variable name', 'SESSION_DRIVER')
+            ->expectsOutputToContain('already configured')
+            ->expectsConfirmation('"SESSION_DRIVER" is already configured. Update it?', 'yes')
+            ->expectsQuestion('Value', 'database')
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['env_static']['SESSION_DRIVER'])->toBe('database');
+    });
+});
+
 describe('netsons:env remove', function () {
     it('removes a variable interactively', function () {
         File::put($this->jsonPath, json_encode([

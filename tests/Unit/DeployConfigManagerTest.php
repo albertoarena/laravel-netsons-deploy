@@ -296,6 +296,42 @@ describe('setSlackWebhook', function () {
     });
 });
 
+describe('has', function () {
+    it('returns false when env_mapping key does not exist', function () {
+        expect($this->manager->has('env_mapping', 'DB_PASSWORD'))->toBeFalse();
+    });
+
+    it('returns true when env_mapping key exists', function () {
+        $this->manager->addEnvMapping('DB_PASSWORD', 'DB_PASSWORD');
+
+        expect($this->manager->has('env_mapping', 'DB_PASSWORD'))->toBeTrue();
+    });
+
+    it('returns false when env_static key does not exist', function () {
+        expect($this->manager->has('env_static', 'SESSION_DRIVER'))->toBeFalse();
+    });
+
+    it('returns true when env_static key exists', function () {
+        $this->manager->addEnvStatic('SESSION_DRIVER', 'database');
+
+        expect($this->manager->has('env_static', 'SESSION_DRIVER'))->toBeTrue();
+    });
+
+    it('returns false when build_env key does not exist', function () {
+        expect($this->manager->has('build_env', 'VITE_APP_NAME'))->toBeFalse();
+    });
+
+    it('returns true when build_env key exists', function () {
+        $this->manager->addBuildEnv('VITE_APP_NAME', 'My App');
+
+        expect($this->manager->has('build_env', 'VITE_APP_NAME'))->toBeTrue();
+    });
+
+    it('returns false for unknown section', function () {
+        expect($this->manager->has('nonexistent', 'KEY'))->toBeFalse();
+    });
+});
+
 describe('exists', function () {
     it('returns false when file does not exist', function () {
         expect($this->manager->exists())->toBeFalse();

@@ -43,6 +43,17 @@ class DeployConfigManager
         );
     }
 
+    public function has(string $section, string $key): bool
+    {
+        $data = $this->read();
+
+        if (! isset($data[$section]) || ! is_array($data[$section])) {
+            return false;
+        }
+
+        return array_key_exists($key, $data[$section]);
+    }
+
     public function addEnvMapping(string $key, string $secretName): void
     {
         $data = $this->read();

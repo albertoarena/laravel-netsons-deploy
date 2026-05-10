@@ -53,7 +53,7 @@ class InstallCommand extends Command
         }
 
         $this->publishConfig($strategy);
-        $this->collectDeployJson();
+        $this->collectDeployJson($strategy);
         $this->publishWorkflow($strategy);
         $this->showRequiredSecrets($strategy);
         $this->showRequiredVariables($strategy);
@@ -107,7 +107,7 @@ class InstallCommand extends Command
         File::put($configPath, $contents);
     }
 
-    protected function collectDeployJson(): void
+    protected function collectDeployJson(string $strategy): void
     {
         if (! $this->input->isInteractive()) {
             return;
@@ -125,8 +125,13 @@ class InstallCommand extends Command
 
         note('Environment variable setup');
 
+        // Show already-handled strategy secrets
+        $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
+        $strategySecrets = $strategyInstance->requiredSecrets();
+        note("The following secrets are already handled by the {$strategy} strategy:\n  ".implode(', ', $strategySecrets));
+
         // Secret-backed env vars
-        if (confirm('Add secret-backed .env variables (from GitHub Secrets)?', false)) {
+        if (confirm('Add additional .env variables from GitHub Secrets? (e.g., DB_PASSWORD, DB_USERNAME)', false)) {
             $this->collectEnvMappings($manager);
         }
 
@@ -166,12 +171,16 @@ class InstallCommand extends Command
                 break;
             }
 
-            $secretName = text(
-                label: 'GitHub Secret name',
-                default: $envKey,
-            );
-            $manager->addEnvMapping($envKey, $secretName);
-            info("Added: {$envKey} -> secrets.{$secretName}");
+            if ($manager->has('env_mapping', $envKey)) {
+                warning("\"{$envKey}\" is already configured. Skipping.");
+            } else {
+                $secretName = text(
+                    label: 'GitHub Secret name',
+                    default: $envKey,
+                );
+                $manager->addEnvMapping($envKey, $secretName);
+                info("Added: {$envKey} -> secrets.{$secretName}");
+            }
         } while (confirm('Add another secret-backed variable?', false));
     }
 
@@ -184,9 +193,13 @@ class InstallCommand extends Command
                 break;
             }
 
-            $value = text('Value');
-            $manager->addEnvStatic($envKey, $value);
-            info("Added: {$envKey}={$value}");
+            if ($manager->has('env_static', $envKey)) {
+                warning("\"{$envKey}\" is already configured. Skipping.");
+            } else {
+                $value = text('Value');
+                $manager->addEnvStatic($envKey, $value);
+                info("Added: {$envKey}={$value}");
+            }
         } while (confirm('Add another static variable?', false));
     }
 
@@ -199,9 +212,13 @@ class InstallCommand extends Command
                 break;
             }
 
-            $value = text('Value');
-            $manager->addBuildEnv($envKey, $value);
-            info("Added: {$envKey}={$value}");
+            if ($manager->has('build_env', $envKey)) {
+                warning("\"{$envKey}\" is already configured. Skipping.");
+            } else {
+                $value = text('Value');
+                $manager->addBuildEnv($envKey, $value);
+                info("Added: {$envKey}={$value}");
+            }
         } while (confirm('Add another build variable?', false));
     }
 

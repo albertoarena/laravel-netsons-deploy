@@ -7,6 +7,7 @@ namespace AlbertoArena\NetsonsDeploy\Commands;
 use AlbertoArena\NetsonsDeploy\Services\DeployConfigManager;
 use Illuminate\Console\Command;
 
+use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\error;
 use function Laravel\Prompts\info;
 use function Laravel\Prompts\note;
@@ -127,6 +128,15 @@ class EnvCommand extends Command
     protected function addSecretBacked(): void
     {
         $envKey = text('ENV variable name');
+
+        if ($this->configManager->has('env_mapping', $envKey)) {
+            warning("\"{$envKey}\" is already configured.");
+
+            if (! confirm("\"{$envKey}\" is already configured. Update it?", false)) {
+                return;
+            }
+        }
+
         $secretName = text(
             label: 'GitHub Secret name (default: same as ENV name)',
             default: $envKey,
@@ -138,6 +148,15 @@ class EnvCommand extends Command
     protected function addStatic(): void
     {
         $envKey = text('ENV variable name');
+
+        if ($this->configManager->has('env_static', $envKey)) {
+            warning("\"{$envKey}\" is already configured.");
+
+            if (! confirm("\"{$envKey}\" is already configured. Update it?", false)) {
+                return;
+            }
+        }
+
         $value = text('Value');
 
         $this->configManager->addEnvStatic($envKey, $value);
@@ -146,6 +165,15 @@ class EnvCommand extends Command
     protected function addBuild(): void
     {
         $envKey = text('ENV variable name');
+
+        if ($this->configManager->has('build_env', $envKey)) {
+            warning("\"{$envKey}\" is already configured.");
+
+            if (! confirm("\"{$envKey}\" is already configured. Update it?", false)) {
+                return;
+            }
+        }
+
         $value = text('Value');
 
         $this->configManager->addBuildEnv($envKey, $value);
