@@ -12,6 +12,7 @@ class DeployConfigManager
         'build_env' => [],
         'custom_commands' => [],
         'notifications' => [],
+        'envaudit' => false,
     ];
 
     public function __construct(
@@ -113,6 +114,13 @@ class DeployConfigManager
         $data['custom_commands'] = array_values(
             array_filter($data['custom_commands'], fn (string $c) => $c !== $command)
         );
+        $this->write($data);
+    }
+
+    public function setEnvaudit(bool $enabled): void
+    {
+        $data = $this->read();
+        $data['envaudit'] = $enabled;
         $this->write($data);
     }
 

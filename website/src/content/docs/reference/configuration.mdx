@@ -238,3 +238,13 @@ Optional Slack deploy notifications.
 ```
 
 The value is the GitHub Secret name containing the Slack webhook URL.
+
+### envaudit
+
+Enables [envaudit](https://albertoarena.github.io/envaudit/) `.env` validation after deployment. When enabled, the workflow downloads the remote `.env` and validates it before proceeding with migrations.
+
+```json
+"envaudit": true
+```
+
+See the [envaudit CI integration guide](https://albertoarena.github.io/envaudit/getting-started/ci-integration/) for details.

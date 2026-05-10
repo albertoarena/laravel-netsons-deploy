@@ -352,8 +352,9 @@ Depends on B1 (Laravel Prompts) for `multiselect()` — already implemented.
 ## B6: Envaudit integration as opt-in default
 
 **Priority:** Enhancement
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### What
 

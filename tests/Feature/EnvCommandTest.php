@@ -87,6 +87,17 @@ describe('netsons:env', function () {
             ->expectsOutputToContain('SLACK_WEBHOOK_DEBUG')
             ->assertSuccessful();
     });
+
+    it('shows envaudit as enabled when configured', function () {
+        File::put($this->jsonPath, json_encode([
+            'envaudit' => true,
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'list', '--no-interaction' => true])
+            ->expectsOutputToContain('envaudit')
+            ->expectsOutputToContain('Validation')
+            ->assertSuccessful();
+    });
 });
 
 describe('netsons:env add', function () {

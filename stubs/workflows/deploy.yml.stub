@@ -251,7 +251,7 @@ jobs:
             sed -i "s|^APP_URL=.*|APP_URL=${APP_URL}|" \${ENV_FILE}
 %%ENV_MAPPING_SED_BLOCK%%          REMOTE
 
-      # ── .htaccess (root) ────────────────────────────────────────────────
+%%ENVAUDIT%%      # ── .htaccess (root) ────────────────────────────────────────────────
       - name: Upload root .htaccess
         env:
           SSH_HOST: ${{ vars.SSH_HOST }}

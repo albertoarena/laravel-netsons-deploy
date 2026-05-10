@@ -332,6 +332,38 @@ describe('has', function () {
     });
 });
 
+describe('envaudit', function () {
+    it('defaults envaudit to false', function () {
+        $data = $this->manager->read();
+
+        expect($data['envaudit'])->toBeFalse();
+    });
+
+    it('reads envaudit when set to true', function () {
+        file_put_contents($this->jsonPath, json_encode([
+            'envaudit' => true,
+        ]));
+
+        $data = $this->manager->read();
+        expect($data['envaudit'])->toBeTrue();
+    });
+
+    it('sets envaudit to true', function () {
+        $this->manager->setEnvaudit(true);
+
+        $data = $this->manager->read();
+        expect($data['envaudit'])->toBeTrue();
+    });
+
+    it('sets envaudit to false', function () {
+        $this->manager->setEnvaudit(true);
+        $this->manager->setEnvaudit(false);
+
+        $data = $this->manager->read();
+        expect($data['envaudit'])->toBeFalse();
+    });
+});
+
 describe('exists', function () {
     it('returns false when file does not exist', function () {
         expect($this->manager->exists())->toBeFalse();

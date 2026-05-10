@@ -159,6 +159,14 @@ class InstallCommand extends Command
             $manager->setSlackWebhook($secretName);
         }
 
+        // Envaudit
+        $enableEnvaudit = confirm(
+            label: 'Enable envaudit .env validation after deploy?',
+            default: true,
+            hint: 'See: https://albertoarena.github.io/envaudit/getting-started/ci-integration/',
+        );
+        $manager->setEnvaudit($enableEnvaudit);
+
         info('Configuration saved to netsons-deploy.json');
     }
 
@@ -302,6 +310,13 @@ class InstallCommand extends Command
             $contents
         );
 
+        // Envaudit (B6)
+        $contents = str_replace(
+            '%%ENVAUDIT%%',
+            $this->generateEnvauditBlock($deployConfig['envaudit'] ?? false),
+            $contents
+        );
+
         // Notifications (W8)
         $contents = str_replace(
             '%%NOTIFICATIONS%%',
@@ -433,6 +448,29 @@ class InstallCommand extends Command
               --data '{"text":":x: Deploy \${{ github.event.inputs.environment }} failed — \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}"}' \\
               "\$SLACK_WEBHOOK"
           fi
+
+YAML;
+    }
+
+    protected function generateEnvauditBlock(bool $enabled): string
+    {
+        if (! $enabled) {
+            return '';
+        }
+
+        return <<<'YAML'
+      # ── Envaudit ────────────────────────────────────────────────────────
+      - name: Validate .env with envaudit
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          scp -P ${SSH_PORT} \
+            ${SSH_USER}@${SSH_HOST}:~/${{ vars.DEPLOY_PATH }}/shared/.env .env
+          npx @albertoarena/envaudit check --ci --no-color
+          rm .env
 
 YAML;
     }

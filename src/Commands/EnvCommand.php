@@ -97,6 +97,16 @@ class EnvCommand extends Command
             );
         }
 
+        // Envaudit
+        if ($data['envaudit'] ?? false) {
+            $hasAny = true;
+            info('Validation:');
+            table(
+                ['Tool', 'Status'],
+                [['envaudit', 'Enabled']]
+            );
+        }
+
         if (! $hasAny) {
             warning('No custom environment variables configured.');
             info('Run "php artisan netsons:env add" to add variables.');

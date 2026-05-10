@@ -359,4 +359,26 @@ describe('netsons:install workflow features', function () {
 
         expect(File::exists($this->jsonPath))->toBeFalse();
     });
+
+    // B6: Envaudit
+    it('includes envaudit step when configured', function () {
+        File::put($this->jsonPath, json_encode([
+            'envaudit' => true,
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Validate .env with envaudit');
+        expect($contents)->toContain('npx @albertoarena/envaudit check --ci --no-color');
+    });
+
+    it('does not include envaudit step when not configured', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('envaudit');
+    });
 });
