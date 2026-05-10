@@ -435,3 +435,36 @@ This downloads the remote `.env`, validates it locally (Node is already installe
 | `stubs/workflows/deploy.yml.stub` | Add `%%ENVAUDIT%%` placeholder |
 | `docs/configuration.md` | Document envaudit config |
 | `website/src/content/docs/reference/configuration.mdx` | Mirror docs |
+
+---
+
+## B7: Improve multiselect UX with usage hint
+
+**Priority:** UX fix
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+The `multiselect()` prompt during `netsons:install` shows selected (■) and deselected (□) items, but there's no visible instruction telling the user how to toggle items or confirm the selection. Users may not know that:
+- **Space** toggles an item on/off
+- **Enter** confirms the selection
+
+### Fix
+
+Update the `hint` parameter on all `multiselect()` calls to include usage instructions:
+
+```php
+multiselect(
+    label: 'Select secret-backed .env variables (from GitHub Secrets)',
+    options: $options,
+    default: array_keys($options),
+    hint: 'Use arrow keys to navigate, space to toggle, enter to confirm',
+);
+```
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Commands/InstallCommand.php` | Update `hint` on both `multiselect()` calls in `collectDetectedEnvVars()` |
