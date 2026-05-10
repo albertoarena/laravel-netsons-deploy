@@ -198,6 +198,17 @@ describe('netsons:install', function () {
 });
 
 describe('netsons:install workflow features', function () {
+    // B12: Prepare Laravel directories
+    it('includes prepare Laravel directories step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Prepare Laravel directories');
+        expect($contents)->toContain('mkdir -p bootstrap/cache');
+        expect($contents)->toContain('mkdir -p storage/framework/{sessions,views,cache}');
+    });
+
     // W1: Dependency caching
     it('includes Composer cache steps in generated workflow', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])

@@ -43,6 +43,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ── Prepare Laravel directories ──────────────────────────────────────
+      - name: Prepare Laravel directories
+        run: |
+          mkdir -p bootstrap/cache
+          mkdir -p storage/framework/{sessions,views,cache}
+
       # ── PHP Setup ───────────────────────────────────────────────────────
       - name: Setup PHP
         uses: shivammathur/setup-php@v2

@@ -676,8 +676,9 @@ This is more opinionated but covers the most common case.
 ## B12: Add "Prepare Laravel directories" step to workflow stub
 
 **Priority:** Bug fix (blocks all first deploys)
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 
