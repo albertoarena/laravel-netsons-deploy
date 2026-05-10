@@ -582,3 +582,90 @@ Update `DeployConfigManager::parseEnvExample()` to:
 |------|---------|
 | `src/Services/DeployConfigManager.php` | Expand static detection in `parseEnvExample()` |
 | `tests/Unit/DeployConfigManagerTest.php` | Add tests for new static detection |
+
+---
+
+## B10: Auto-route VITE_* variables to build_env
+
+**Priority:** UX fix
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+When a user adds a `VITE_*` variable via `netsons:env add` and selects "Static (fixed value)", it goes into `env_static` and gets set in the remote `.env` via sed. But Vite bakes `VITE_*` variables at **build time** (`yarn build`), not runtime. If the frontend reads `import.meta.env.VITE_APP_NAME`, it must be set during the build step — not just in the server `.env`.
+
+The user shouldn't need to know this distinction. The tool should handle it automatically.
+
+### Proposal
+
+When a `VITE_*` key is added (via `netsons:env add` or during `netsons:install`):
+- Automatically add it to **`build_env`** (for the `yarn build` step)
+- Also add it to **`env_static`** (for server-side Laravel access if needed)
+- Show a note: "VITE_* variables are also added to build env for asset compilation"
+
+In `netsons:env add`, when the user selects "Static" or "Secret-backed" and the key starts with `VITE_`:
+```
+"VITE_APP_NAME" will also be added to build env (required for Vite asset compilation).
+```
+
+During auto-detection in `netsons:install`, `VITE_*` keys should be excluded from the `env_static` multiselect (they're already excluded by the `VITE_*` prefix filter) but should appear in a separate build env prompt.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Commands/EnvCommand.php` | Auto-add VITE_* to build_env when adding as static/secret |
+| `src/Commands/InstallCommand.php` | Auto-detect VITE_* from .env.example for build_env |
+| `src/Services/DeployConfigManager.php` | Possibly add `parseEnvExample()` build_env detection |
+
+---
+
+## B11: Allow editing static values during auto-detect
+
+**Priority:** UX fix
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+When `parseEnvExample()` detects `SESSION_DRIVER=file` from `.env.example`, it suggests it as a static variable with the value `file`. But the whole reason users override `SESSION_DRIVER` is to change it to `database` (or `redis`) for production. The auto-detect shows the development default, not the production value the user actually needs.
+
+### Proposal
+
+After the static multiselect, offer to edit the values for selected items:
+
+```
+Selected static variables:
+  SESSION_DRIVER = file
+  LARAVEL_PDF_DRIVER = dompdf
+
+Edit values? (yes/no) [no]:
+```
+
+If yes, loop through selected items and let the user change each value:
+
+```
+SESSION_DRIVER [file]: database
+LARAVEL_PDF_DRIVER [dompdf]: (enter to keep)
+```
+
+Use `text()` with the current value as `default`, so pressing Enter keeps it unchanged.
+
+### Alternative
+
+Detect known "dev-default" values and suggest production alternatives:
+
+| Key | Dev default | Suggest |
+|---|---|---|
+| `SESSION_DRIVER` | `file` | `database` |
+| `CACHE_STORE` | `file` | `redis` |
+| `QUEUE_CONNECTION` | `sync` | `database` or `redis` |
+
+This is more opinionated but covers the most common case.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Commands/InstallCommand.php` | Add edit prompt after static multiselect in `collectDetectedEnvVars()` |
