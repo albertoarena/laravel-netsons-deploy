@@ -206,9 +206,10 @@ describe('netsons:env remove', function () {
         ]));
 
         $this->artisan('netsons:env', ['action' => 'remove'])
-            ->expectsChoice('Which variable to remove?', 'DB_DATABASE (secret: DB_DATABASE)', [
+            ->expectsChoice('Which item to remove?', 'DB_DATABASE (secret: DB_DATABASE)', [
                 'DB_DATABASE (secret: DB_DATABASE)' => 'DB_DATABASE (secret: DB_DATABASE)',
                 'DB_USERNAME (secret: DB_USERNAME)' => 'DB_USERNAME (secret: DB_USERNAME)',
+                '-- Cancel --' => '-- Cancel --',
             ])
             ->assertSuccessful();
 
@@ -216,9 +217,77 @@ describe('netsons:env remove', function () {
         expect($data['env_mapping'])->toBe(['DB_USERNAME' => 'DB_USERNAME']);
     });
 
+    it('removes a custom command interactively', function () {
+        File::put($this->jsonPath, json_encode([
+            'custom_commands' => ['permission:cache-reset', 'horizon:terminate'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'remove'])
+            ->expectsChoice('Which item to remove?', 'command: permission:cache-reset', [
+                'command: permission:cache-reset' => 'command: permission:cache-reset',
+                'command: horizon:terminate' => 'command: horizon:terminate',
+                '-- Cancel --' => '-- Cancel --',
+            ])
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['custom_commands'])->toBe(['horizon:terminate']);
+    });
+
+    it('removes slack notification interactively', function () {
+        File::put($this->jsonPath, json_encode([
+            'notifications' => ['slack_webhook_secret' => 'SLACK_WEBHOOK_DEBUG'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'remove'])
+            ->expectsChoice('Which item to remove?', 'notification: Slack (SLACK_WEBHOOK_DEBUG)', [
+                'notification: Slack (SLACK_WEBHOOK_DEBUG)' => 'notification: Slack (SLACK_WEBHOOK_DEBUG)',
+                '-- Cancel --' => '-- Cancel --',
+            ])
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['notifications'])->toBe([]);
+    });
+
+    it('shows all types in remove list', function () {
+        File::put($this->jsonPath, json_encode([
+            'env_mapping' => ['DB_PASSWORD' => 'DB_PASSWORD'],
+            'build_env' => ['VITE_APP_NAME' => 'My App'],
+            'custom_commands' => ['permission:cache-reset'],
+            'notifications' => ['slack_webhook_secret' => 'SLACK_WEBHOOK'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'remove'])
+            ->expectsChoice('Which item to remove?', 'DB_PASSWORD (secret: DB_PASSWORD)', [
+                'DB_PASSWORD (secret: DB_PASSWORD)' => 'DB_PASSWORD (secret: DB_PASSWORD)',
+                'VITE_APP_NAME (build: My App)' => 'VITE_APP_NAME (build: My App)',
+                'command: permission:cache-reset' => 'command: permission:cache-reset',
+                'notification: Slack (SLACK_WEBHOOK)' => 'notification: Slack (SLACK_WEBHOOK)',
+                '-- Cancel --' => '-- Cancel --',
+            ])
+            ->assertSuccessful();
+    });
+
+    it('cancels remove when user selects cancel', function () {
+        File::put($this->jsonPath, json_encode([
+            'env_mapping' => ['DB_PASSWORD' => 'DB_PASSWORD'],
+        ]));
+
+        $this->artisan('netsons:env', ['action' => 'remove'])
+            ->expectsChoice('Which item to remove?', '-- Cancel --', [
+                'DB_PASSWORD (secret: DB_PASSWORD)' => 'DB_PASSWORD (secret: DB_PASSWORD)',
+                '-- Cancel --' => '-- Cancel --',
+            ])
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['env_mapping'])->toBe(['DB_PASSWORD' => 'DB_PASSWORD']);
+    });
+
     it('shows message when nothing to remove', function () {
         $this->artisan('netsons:env', ['action' => 'remove', '--no-interaction' => true])
-            ->expectsOutputToContain('No variables configured')
+            ->expectsOutputToContain('No items configured')
             ->assertSuccessful();
     });
 });

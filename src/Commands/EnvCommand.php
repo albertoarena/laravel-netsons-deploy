@@ -193,25 +193,41 @@ class EnvCommand extends Command
         foreach ($data['build_env'] as $key => $value) {
             $choices["{$key} (build: {$value})"] = "{$key} (build: {$value})";
         }
+        foreach ($data['custom_commands'] as $command) {
+            $choices["command: {$command}"] = "command: {$command}";
+        }
+        $webhookSecret = $data['notifications']['slack_webhook_secret'] ?? '';
+        if ($webhookSecret !== '') {
+            $choices["notification: Slack ({$webhookSecret})"] = "notification: Slack ({$webhookSecret})";
+        }
 
         if (empty($choices)) {
-            warning('No variables configured to remove.');
+            warning('No items configured to remove.');
 
             return self::SUCCESS;
         }
 
-        $selected = select('Which variable to remove?', $choices);
+        $choices['-- Cancel --'] = '-- Cancel --';
 
-        // Parse the selection to determine type and key
+        $selected = select('Which item to remove?', $choices);
+
+        if ($selected === '-- Cancel --') {
+            return self::SUCCESS;
+        }
+
         if (preg_match('/^(\S+)\s+\(secret:/', $selected, $matches)) {
             $this->configManager->removeEnvMapping($matches[1]);
         } elseif (preg_match('/^(\S+)\s+\(static:/', $selected, $matches)) {
             $this->configManager->removeEnvStatic($matches[1]);
         } elseif (preg_match('/^(\S+)\s+\(build:/', $selected, $matches)) {
             $this->configManager->removeBuildEnv($matches[1]);
+        } elseif (preg_match('/^command: (.+)$/', $selected, $matches)) {
+            $this->configManager->removeCustomCommand($matches[1]);
+        } elseif (preg_match('/^notification: Slack/', $selected)) {
+            $this->configManager->setSlackWebhook(null);
         }
 
-        info('Variable removed from netsons-deploy.json.');
+        info('Item removed from netsons-deploy.json.');
         note('Run "php artisan netsons:install --force" to regenerate the workflow.');
 
         return self::SUCCESS;
