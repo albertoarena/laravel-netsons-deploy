@@ -7,6 +7,7 @@ namespace AlbertoArena\NetsonsDeploy\Commands;
 use AlbertoArena\NetsonsDeploy\Strategies\FtpStrategy;
 use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\File;
 
 class CheckCommand extends Command
 {
@@ -26,6 +27,7 @@ class CheckCommand extends Command
         $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
 
         $this->showConfiguration($config, $strategy);
+        $this->showWorkflowStatus();
         $this->showSecrets($strategyInstance);
         $this->showVariables($strategyInstance);
         $this->showValidation($strategyInstance, $config);
@@ -40,14 +42,28 @@ class CheckCommand extends Command
             ['Setting', 'Value'],
             [
                 ['Strategy', $strategy],
-                ['SSH Host', $config['ssh']['host'] ?? '(not set)'],
                 ['SSH Port', (string) ($config['ssh']['port'] ?? 65100)],
-                ['SSH User', $config['ssh']['user'] ?? '(not set)'],
                 ['PHP Binary', $config['php_binary'] ?? '/usr/local/bin/ea-php84'],
                 ['Deploy Path', $config['deploy_path'] ?? 'public_html'],
                 ['Releases Keep', (string) ($config['releases']['keep'] ?? 5)],
             ]
         );
+    }
+
+    protected function showWorkflowStatus(): void
+    {
+        $workflowPath = base_path('.github/workflows/deploy.yml');
+        $exists = File::exists($workflowPath);
+
+        $this->info('');
+        $this->info('  Workflow File:');
+
+        if ($exists) {
+            $this->info('    .github/workflows/deploy.yml — found');
+        } else {
+            $this->warn('    .github/workflows/deploy.yml — not found');
+            $this->info('    Run "php artisan netsons:install" to generate it.');
+        }
     }
 
     protected function showSecrets(FtpStrategy|GitStrategy $strategy): void
@@ -76,7 +92,7 @@ class CheckCommand extends Command
 
         $this->info('');
         if (empty($errors)) {
-            $this->info('  Validation: All checks passed.');
+            $this->info('  Local config: All checks passed.');
         } else {
             $this->warn('  Validation Issues:');
             foreach ($errors as $error) {
@@ -84,6 +100,9 @@ class CheckCommand extends Command
             }
         }
 
+        $this->info('');
+        $this->info('  Credentials (SSH, FTP, Git) are configured via GitHub Secrets/Variables,');
+        $this->info('  not in local config. See: https://albertoarena.github.io/laravel-netsons-deploy/getting-started/github-secrets/');
         $this->info('');
     }
 }

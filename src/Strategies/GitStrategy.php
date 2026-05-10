@@ -15,18 +15,6 @@ class GitStrategy implements DeployStrategyInterface
     {
         $errors = [];
 
-        if (empty($config['ssh']['host'])) {
-            $errors[] = 'SSH host is required.';
-        }
-
-        if (empty($config['ssh']['user'])) {
-            $errors[] = 'SSH user is required.';
-        }
-
-        if (empty($config['git']['repo'])) {
-            $errors[] = 'Git repository URL is required.';
-        }
-
         if (empty($config['deploy_path'])) {
             $errors[] = 'Deploy path is required.';
         }

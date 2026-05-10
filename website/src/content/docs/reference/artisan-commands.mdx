@@ -18,15 +18,29 @@ php artisan netsons:install [--strategy=ftp|git] [--force]
 | Option | Description |
 |---|---|
 | `--strategy=ftp\|git` | Set the deployment strategy (skips interactive prompt) |
-| `--force` | Overwrite existing config file without asking |
+| `--force` | Overwrite existing config and workflow files without asking |
 | `--no-interaction` | Run non-interactively (defaults to FTP if no strategy given) |
 
 ### What it does
 
 1. Publishes `config/netsons-deploy.php` with the selected strategy
-2. Displays required GitHub Secrets for the chosen strategy
-3. Displays required GitHub Variables
-4. Shows next steps
+2. Generates `.github/workflows/deploy.yml` with placeholders replaced (strategy, PHP version, etc.)
+3. Displays required GitHub Secrets for the chosen strategy
+4. Displays required GitHub Variables
+5. Shows next steps
+
+### Workflow generation
+
+The installer creates `.github/workflows/deploy.yml` from a stub template, replacing all placeholders with values derived from your config:
+
+- `%%STRATEGY%%` — the selected strategy (`ftp` or `git`)
+- `%%PHP_VERSION%%` — derived from the `php_binary` config (e.g., `ea-php84` becomes `8.4`)
+- `%%NODE_VERSION%%` — defaults to `22`
+- `%%PACKAGE_MANAGER%%` — defaults to `yarn`
+- `%%REMOTE_PHP%%` — the remote PHP binary path from config
+- `%%RELEASES_KEEP%%` — number of releases to keep from config
+
+If `.github/workflows/deploy.yml` already exists, it is preserved unless `--force` is used.
 
 ### Switching strategies
 
@@ -36,19 +50,19 @@ To switch from FTP to Git:
 php artisan netsons:install --strategy=git --force
 ```
 
-This overwrites the config file and updates the strategy default.
+This overwrites the config file, regenerates the workflow, and updates the strategy default.
 
 ### Re-running safely
 
 Without `--force`, the installer will:
 - **Interactive mode** — ask before overwriting an existing config
-- **Non-interactive mode** — skip the overwrite and show the updated secrets/variables
+- **Non-interactive mode** — skip the config overwrite but still generate the workflow if missing
 
 ---
 
 ## netsons:check
 
-Validates your deployment configuration and shows readiness status.
+Shows your local configuration and deployment readiness.
 
 ### Usage
 
@@ -59,10 +73,12 @@ php artisan netsons:check
 ### Output
 
 The command displays:
-- **Configuration** — current settings (strategy, SSH host/port/user, PHP binary, deploy path, releases keep)
+- **Configuration** — local settings (strategy, SSH port, PHP binary, deploy path, releases keep)
+- **Workflow status** — whether `.github/workflows/deploy.yml` exists
 - **Required Secrets** — GitHub secrets needed for the configured strategy
 - **Required Variables** — GitHub variables needed
-- **Validation** — checks for missing or invalid configuration values
+- **Local validation** — checks local config values (deploy path)
+- **Credentials reminder** — note that SSH, FTP, and Git credentials are configured via GitHub Secrets/Variables, not locally
 
 ### Example output
 
@@ -75,14 +91,21 @@ The command displays:
   | Setting       | Value                      |
   +---------------+----------------------------+
   | Strategy      | git                        |
-  | SSH Host      | (not set)                  |
   | SSH Port      | 65100                      |
   | PHP Binary    | /usr/local/bin/ea-php84    |
   | Deploy Path   | public_html                |
   | Releases Keep | 5                          |
   +---------------+----------------------------+
 
-  Validation Issues:
-    - SSH host is required.
-    - Git repository URL is required.
+  Workflow File:
+    .github/workflows/deploy.yml — found
+
+  Local config: All checks passed.
+
+  Credentials (SSH, FTP, Git) are configured via GitHub Secrets/Variables,
+  not in local config.
 ```
+
+### What it does NOT check
+
+The check command does **not** validate SSH, FTP, or Git credentials. These values are stored as GitHub Secrets/Variables and are only available at deploy time in GitHub Actions. See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/) for setup instructions.

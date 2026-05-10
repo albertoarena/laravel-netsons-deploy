@@ -33,17 +33,18 @@ php artisan netsons:install
 ```
 
 This will:
-- Publish the config file to `config/netsons-deploy.php`
-- Show the required GitHub Secrets and Variables
 - Guide you through strategy selection (FTP or Git)
+- Publish the config file to `config/netsons-deploy.php`
+- Generate `.github/workflows/deploy.yml` with your settings
+- Show the required GitHub Secrets and Variables
 
 ### 3. Configure GitHub Secrets
 
 Add the required secrets to your GitHub repository (Settings > Secrets and variables > Actions). See [GitHub Secrets Reference](docs/github-secrets.md).
 
-### 4. Set up the workflow
+### 4. Review the workflow
 
-Copy the generated workflow stub to `.github/workflows/deploy.yml` and replace all `%%PLACEHOLDER%%` values with your settings.
+Review `.github/workflows/deploy.yml` and adjust any settings if needed.
 
 ### 5. Deploy
 
@@ -92,7 +93,7 @@ See [`action.yml`](action.yml) for all available inputs.
 
 ### `netsons:install`
 
-Interactive setup wizard. Publishes config, shows required secrets/variables.
+Interactive setup wizard. Publishes config and deploy workflow, shows required secrets/variables.
 
 ```bash
 php artisan netsons:install
@@ -101,7 +102,7 @@ php artisan netsons:install --strategy=git
 
 ### `netsons:check`
 
-Validates your configuration and shows readiness status.
+Shows your local configuration, checks that the workflow file exists, and lists required GitHub Secrets/Variables.
 
 ```bash
 php artisan netsons:check

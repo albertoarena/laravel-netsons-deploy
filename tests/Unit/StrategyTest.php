@@ -50,23 +50,23 @@ describe('FtpStrategy', function () {
         expect($errors)->toBeArray()->toBeEmpty();
     });
 
-    it('returns errors when SSH host is missing', function () {
+    it('does not validate credentials that are GitHub-only', function () {
         $config = [
             'strategy' => 'ftp',
-            'ssh' => ['host' => null, 'port' => 65100, 'user' => 'deploy'],
-            'ftp' => ['host' => 'ftp.example.com', 'port' => 21, 'user' => 'ftpuser', 'password' => 'secret', 'protocol' => 'ftp'],
+            'ssh' => ['host' => null, 'port' => 65100, 'user' => null],
+            'ftp' => ['host' => null, 'port' => 21, 'user' => null, 'password' => null, 'protocol' => 'ftp'],
             'deploy_path' => 'public_html',
         ];
         $errors = $this->strategy->validate($config);
-        expect($errors)->not->toBeEmpty();
+        expect($errors)->toBeEmpty();
     });
 
-    it('returns errors when FTP host is missing', function () {
+    it('returns errors when deploy path is missing', function () {
         $config = [
             'strategy' => 'ftp',
             'ssh' => ['host' => 'example.com', 'port' => 65100, 'user' => 'deploy'],
-            'ftp' => ['host' => null, 'port' => 21, 'user' => 'ftpuser', 'password' => 'secret', 'protocol' => 'ftp'],
-            'deploy_path' => 'public_html',
+            'ftp' => ['host' => 'ftp.example.com', 'port' => 21, 'user' => 'ftpuser', 'password' => 'secret', 'protocol' => 'ftp'],
+            'deploy_path' => '',
         ];
         $errors = $this->strategy->validate($config);
         expect($errors)->not->toBeEmpty();
@@ -122,23 +122,23 @@ describe('GitStrategy', function () {
         expect($errors)->toBeArray()->toBeEmpty();
     });
 
-    it('returns errors when SSH host is missing', function () {
+    it('does not validate credentials that are GitHub-only', function () {
         $config = [
             'strategy' => 'git',
-            'ssh' => ['host' => null, 'port' => 65100, 'user' => 'deploy'],
-            'git' => ['repo' => 'git@github.com:user/repo.git', 'branch' => 'main'],
+            'ssh' => ['host' => null, 'port' => 65100, 'user' => null],
+            'git' => ['repo' => null, 'branch' => 'main'],
             'deploy_path' => 'public_html',
         ];
         $errors = $this->strategy->validate($config);
-        expect($errors)->not->toBeEmpty();
+        expect($errors)->toBeEmpty();
     });
 
-    it('returns errors when git repo is missing', function () {
+    it('returns errors when deploy path is missing', function () {
         $config = [
             'strategy' => 'git',
             'ssh' => ['host' => 'example.com', 'port' => 65100, 'user' => 'deploy'],
-            'git' => ['repo' => null, 'branch' => 'main'],
-            'deploy_path' => 'public_html',
+            'git' => ['repo' => 'git@github.com:user/repo.git', 'branch' => 'main'],
+            'deploy_path' => '',
         ];
         $errors = $this->strategy->validate($config);
         expect($errors)->not->toBeEmpty();

@@ -41,7 +41,8 @@ The service provider is auto-discovered by Laravel.
 The installer will:
 1. Publish `config/netsons-deploy.php`
 2. Set the strategy in the config file
-3. Display required GitHub Secrets and Variables
+3. Generate `.github/workflows/deploy.yml` with placeholders replaced
+4. Display required GitHub Secrets and Variables
 
 ## Verify your setup
 
@@ -49,7 +50,7 @@ The installer will:
 php artisan netsons:check
 ```
 
-This shows your current configuration, lists required secrets/variables, and validates your setup.
+This shows your local configuration, checks that the workflow file exists, and lists required GitHub Secrets/Variables. Credentials (SSH, FTP, Git) are configured via GitHub Secrets — the check command does not validate them locally.
 
 ## Re-running the installer
 

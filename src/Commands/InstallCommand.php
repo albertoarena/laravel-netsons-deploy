@@ -34,6 +34,7 @@ class InstallCommand extends Command
         if ($configExists) {
             if (! $this->shouldOverwrite()) {
                 $this->info('  Keeping existing config. Only updating displayed information.');
+                $this->publishWorkflow($strategy);
                 $this->showRequiredSecrets($strategy);
                 $this->showRequiredVariables($strategy);
                 $this->showNextSteps($strategy);
@@ -45,6 +46,7 @@ class InstallCommand extends Command
         }
 
         $this->publishConfig($strategy);
+        $this->publishWorkflow($strategy);
         $this->showRequiredSecrets($strategy);
         $this->showRequiredVariables($strategy);
         $this->showNextSteps($strategy);
@@ -97,6 +99,55 @@ class InstallCommand extends Command
         File::put($configPath, $contents);
     }
 
+    protected function publishWorkflow(string $strategy): void
+    {
+        $workflowPath = base_path('.github/workflows/deploy.yml');
+        $stubPath = __DIR__.'/../../stubs/workflows/deploy.yml.stub';
+
+        if (File::exists($workflowPath) && ! $this->option('force')) {
+            $this->info('  Workflow .github/workflows/deploy.yml already exists (use --force to overwrite).');
+
+            return;
+        }
+
+        if (! File::exists($stubPath)) {
+            $this->warn('  Workflow stub not found.');
+
+            return;
+        }
+
+        File::ensureDirectoryExists(dirname($workflowPath));
+
+        $config = config('netsons-deploy') ?? [];
+
+        $contents = File::get($stubPath);
+        $contents = str_replace('%%STRATEGY%%', $strategy, $contents);
+        $contents = str_replace('%%PHP_VERSION%%', $this->resolvePhpVersion($config), $contents);
+        $contents = str_replace('%%NODE_VERSION%%', '22', $contents);
+        $contents = str_replace('%%PACKAGE_MANAGER%%', 'yarn', $contents);
+        $contents = str_replace('%%REMOTE_PHP%%', $config['php_binary'] ?? '/usr/local/bin/ea-php84', $contents);
+        $contents = str_replace('%%RELEASES_KEEP%%', (string) ($config['releases']['keep'] ?? 5), $contents);
+
+        // Remove the placeholder instruction comment — no longer needed
+        $contents = preg_replace('/^#\s*1\.\s*Replace all.*\n/m', '', $contents);
+
+        File::put($workflowPath, $contents);
+
+        $this->info('  Workflow published to .github/workflows/deploy.yml');
+    }
+
+    protected function resolvePhpVersion(array $config): string
+    {
+        $phpBinary = $config['php_binary'] ?? '/usr/local/bin/ea-php84';
+
+        // Extract version from ea-phpXX path (e.g. ea-php84 -> 8.4)
+        if (preg_match('/ea-php(\d)(\d)/', $phpBinary, $matches)) {
+            return $matches[1].'.'.$matches[2];
+        }
+
+        return '8.4';
+    }
+
     protected function showRequiredSecrets(string $strategy): void
     {
         $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
@@ -131,10 +182,10 @@ class InstallCommand extends Command
     {
         $this->info('');
         $this->info('  Next steps:');
-        $this->info('  1. Edit config/netsons-deploy.php with your settings');
+        $this->info('  1. Review .github/workflows/deploy.yml and adjust settings');
         $this->info('  2. Add the required secrets to your GitHub repository');
         $this->info('  3. Add the required variables to your GitHub repository');
-        $this->info("  4. Set up your deployment workflow using the '{$strategy}' strategy");
+        $this->info('  4. Push to GitHub and trigger the workflow');
         $this->info('');
     }
 

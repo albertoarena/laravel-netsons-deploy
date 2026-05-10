@@ -6,10 +6,14 @@ use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
     $this->configPath = config_path('netsons-deploy.php');
+    $this->workflowPath = base_path('.github/workflows/deploy.yml');
 
     // Clean up if exists
     if (File::exists($this->configPath)) {
         File::delete($this->configPath);
+    }
+    if (File::exists($this->workflowPath)) {
+        File::delete($this->workflowPath);
     }
 });
 
@@ -17,6 +21,12 @@ afterEach(function () {
     if (File::exists($this->configPath)) {
         File::delete($this->configPath);
     }
+    if (File::exists($this->workflowPath)) {
+        File::delete($this->workflowPath);
+    }
+    // Clean up empty dirs
+    @rmdir(base_path('.github/workflows'));
+    @rmdir(base_path('.github'));
 });
 
 describe('netsons:install', function () {
@@ -114,5 +124,68 @@ describe('netsons:install', function () {
 
         $contents = File::get($this->configPath);
         expect($contents)->toContain("'NETSONS_DEPLOY_STRATEGY', 'ftp'");
+    });
+
+    it('publishes the deploy workflow file', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        expect(File::exists($this->workflowPath))->toBeTrue();
+    });
+
+    it('replaces strategy placeholder in published workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain("STRATEGY: 'git'");
+        expect($contents)->not->toContain('%%STRATEGY%%');
+    });
+
+    it('replaces php version placeholder in published workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('%%PHP_VERSION%%');
+    });
+
+    it('replaces all placeholders in published workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('%%');
+    });
+
+    it('does not overwrite existing workflow without --force', function () {
+        // Create a custom workflow
+        File::ensureDirectoryExists(dirname($this->workflowPath));
+        File::put($this->workflowPath, 'custom workflow content');
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toBe('custom workflow content');
+    });
+
+    it('overwrites existing workflow with --force', function () {
+        // Create a custom workflow
+        File::ensureDirectoryExists(dirname($this->workflowPath));
+        File::put($this->workflowPath, 'custom workflow content');
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toBe('custom workflow content');
+        expect($contents)->toContain('Deploy to Netsons');
+    });
+
+    it('shows workflow published message', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->expectsOutputToContain('.github/workflows/deploy.yml')
+            ->assertSuccessful();
     });
 });

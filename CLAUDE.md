@@ -12,8 +12,8 @@
 This package has two faces:
 
 1. **Composer Package** — installed via `composer require albertoarena/laravel-netsons-deploy --dev`. Provides:
-   - `php artisan netsons:install` — interactive setup, publishes config + workflow stubs
-   - `php artisan netsons:check` — validates environment & secrets readiness
+   - `php artisan netsons:install` — interactive setup, publishes config + generates `.github/workflows/deploy.yml`
+   - `php artisan netsons:check` — shows local config, checks workflow file exists, lists required GitHub Secrets/Variables
    - Config file `config/netsons-deploy.php`
    - Publishable GitHub Actions workflow templates (`stubs/workflows/`)
    - Publishable `.htaccess` stubs for root and public directories
