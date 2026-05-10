@@ -670,3 +670,40 @@ This is more opinionated but covers the most common case.
 | File | Changes |
 |------|---------|
 | `src/Commands/InstallCommand.php` | Add edit prompt after static multiselect in `collectDetectedEnvVars()` |
+
+---
+
+## B12: Add "Prepare Laravel directories" step to workflow stub
+
+**Priority:** Bug fix (blocks all first deploys)
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+On a clean CI checkout, `bootstrap/cache` and `storage/framework/{sessions,views,cache}` don't exist because they are gitignored by default in Laravel. `composer install` triggers `post-autoload-dump` which runs `artisan package:discover`, which fails with:
+
+```
+The /home/runner/work/.../bootstrap/cache directory must be present and writable.
+```
+
+This affects **every** Laravel project on first deploy. The old hand-crafted workflow had a "Prepare Laravel directories" step that created these directories before `composer install`.
+
+### Fix
+
+Add a step to `stubs/workflows/deploy.yml.stub` between "Checkout code" and "Install Composer dependencies":
+
+```yaml
+# ── Prepare Laravel directories ──────────────────────────────────
+- name: Prepare Laravel directories
+  run: |
+    mkdir -p bootstrap/cache
+    mkdir -p storage/framework/{sessions,views,cache}
+```
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Add "Prepare Laravel directories" step |
+| `tests/Feature/InstallCommandTest.php` | Test that generated workflow contains the step |
