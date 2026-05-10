@@ -131,7 +131,7 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 - No dependencies beyond Laravel framework and `laravel/prompts` (keep it lightweight)
 - **Always use Laravel Prompts** (`use function Laravel\Prompts\...`) for all CLI interactions and output in commands. Never use `$this->info()`, `$this->warn()`, `$this->error()`, `$this->choice()`, `$this->ask()`, `$this->confirm()`, or `$this->table()` — use the equivalent Laravel Prompts functions: `info()`, `warning()`, `error()`, `select()`, `text()`, `confirm()`, `table()`, `note()`.
 - Shell scripts must be POSIX-compatible (sh, not bash-specific) where possible, bash when needed
-- Use TDD approach
+- **TDD is mandatory** — always write failing tests first, then implement. Never commit implementation code without corresponding tests. This applies to all changes: new features, bug fixes, refactors
 
 ## Before Committing
 

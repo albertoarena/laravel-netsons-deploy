@@ -360,6 +360,23 @@ describe('netsons:install workflow features', function () {
         expect(File::exists($this->jsonPath))->toBeFalse();
     });
 
+    // B11: Edited static values appear in generated workflow
+    it('uses edited static values in generated workflow', function () {
+        // Simulate a user who selected SESSION_DRIVER but changed value to database
+        File::put($this->jsonPath, json_encode([
+            'env_static' => ['SESSION_DRIVER' => 'database', 'LARAVEL_PDF_DRIVER' => 'dompdf'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('SESSION_DRIVER');
+        expect($contents)->toContain('database');
+        expect($contents)->toContain('LARAVEL_PDF_DRIVER');
+        expect($contents)->toContain('dompdf');
+    });
+
     // B6: Envaudit
     it('includes envaudit step when configured', function () {
         File::put($this->jsonPath, json_encode([
