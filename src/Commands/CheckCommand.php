@@ -27,7 +27,7 @@ class CheckCommand extends Command
 
         $config = config('netsons-deploy');
         $strategy = $config['strategy'] ?? 'ftp';
-        $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
+        $strategyInstance = $strategy === 'git' ? new GitStrategy : new FtpStrategy;
 
         $this->showConfiguration($config, $strategy);
         $this->showWorkflowStatus();

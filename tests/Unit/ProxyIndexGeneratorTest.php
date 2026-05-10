@@ -5,7 +5,7 @@ declare(strict_types=1);
 use AlbertoArena\NetsonsDeploy\Services\ProxyIndexGenerator;
 
 beforeEach(function () {
-    $this->generator = new ProxyIndexGenerator();
+    $this->generator = new ProxyIndexGenerator;
 });
 
 describe('generate', function () {

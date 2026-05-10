@@ -8,7 +8,7 @@ use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 
 describe('FtpStrategy', function () {
     beforeEach(function () {
-        $this->strategy = new FtpStrategy();
+        $this->strategy = new FtpStrategy;
     });
 
     it('implements DeployStrategyInterface', function () {
@@ -75,7 +75,7 @@ describe('FtpStrategy', function () {
 
 describe('GitStrategy', function () {
     beforeEach(function () {
-        $this->strategy = new GitStrategy();
+        $this->strategy = new GitStrategy;
     });
 
     it('implements DeployStrategyInterface', function () {

@@ -193,8 +193,9 @@ Can be implemented independently of B1 (Laravel Prompts), but B1 would enhance t
 ## B3: Adopt Laravel Pint for code styling
 
 **Priority:** Enhancement
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### What
 

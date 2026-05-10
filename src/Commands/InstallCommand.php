@@ -126,7 +126,7 @@ class InstallCommand extends Command
         note('Environment variable setup');
 
         // Show already-handled strategy secrets
-        $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
+        $strategyInstance = $strategy === 'git' ? new GitStrategy : new FtpStrategy;
         $strategySecrets = $strategyInstance->requiredSecrets();
         note("The following secrets are already handled by the {$strategy} strategy:\n  ".implode(', ', $strategySecrets));
 
@@ -260,7 +260,7 @@ class InstallCommand extends Command
         $config = config('netsons-deploy') ?? [];
         $jsonPath = base_path('netsons-deploy.json');
         $deployConfig = (new DeployConfigManager($jsonPath))->read();
-        $envManager = new EnvManager();
+        $envManager = new EnvManager;
 
         $contents = File::get($stubPath);
 
@@ -277,34 +277,34 @@ class InstallCommand extends Command
         $contents = str_replace('%%FTP_SERVER_DIR%%', $this->resolveFtpServerDir($ftpRootPath), $contents);
 
         // Build env (W7)
-        $contents = str_replace("%%BUILD_ENV%%", $this->generateBuildEnvBlock($deployConfig['build_env']), $contents);
+        $contents = str_replace('%%BUILD_ENV%%', $this->generateBuildEnvBlock($deployConfig['build_env']), $contents);
 
         // Env mapping env block + sed block (W2)
         $contents = str_replace(
-            "%%ENV_MAPPING_ENV_BLOCK%%",
+            '%%ENV_MAPPING_ENV_BLOCK%%',
             $this->generateEnvMappingEnvBlock($deployConfig['env_mapping'], $envManager),
             $contents
         );
         $contents = str_replace(
-            "%%ENV_MAPPING_SED_BLOCK%%",
+            '%%ENV_MAPPING_SED_BLOCK%%',
             $this->generateEnvMappingSedBlock($deployConfig['env_mapping'], $deployConfig['env_static'], $envManager),
             $contents
         );
 
         // Seeders (W4)
         $seeders = $config['seeders'] ?? [];
-        $contents = str_replace("%%SEEDERS%%", $this->generateSeedersBlock($seeders), $contents);
+        $contents = str_replace('%%SEEDERS%%', $this->generateSeedersBlock($seeders), $contents);
 
         // Custom commands (W6)
         $contents = str_replace(
-            "%%CUSTOM_COMMANDS%%",
+            '%%CUSTOM_COMMANDS%%',
             $this->generateCustomCommandsBlock($deployConfig['custom_commands']),
             $contents
         );
 
         // Notifications (W8)
         $contents = str_replace(
-            "%%NOTIFICATIONS%%",
+            '%%NOTIFICATIONS%%',
             $this->generateNotificationsBlock($deployConfig['notifications']),
             $contents
         );
@@ -439,7 +439,7 @@ YAML;
 
     protected function showRequiredSecrets(string $strategy): void
     {
-        $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
+        $strategyInstance = $strategy === 'git' ? new GitStrategy : new FtpStrategy;
 
         note('Required GitHub Secrets:');
         table(
@@ -453,7 +453,7 @@ YAML;
 
     protected function showRequiredVariables(string $strategy): void
     {
-        $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
+        $strategyInstance = $strategy === 'git' ? new GitStrategy : new FtpStrategy;
 
         note('Required GitHub Variables:');
         table(

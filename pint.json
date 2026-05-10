@@ -1,0 +1,9 @@
+{
+    "preset": "laravel",
+    "rules": {
+        "php_unit_attributes": false
+    },
+    "config": {
+        "php_version": "8.2"
+    }
+}

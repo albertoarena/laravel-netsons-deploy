@@ -124,7 +124,7 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 
 - **PHP 8.2+** minimum (wide compatibility with Laravel 10/11/12/13)
 - **Laravel 10/11/12/13** compatibility
-- Follow PSR-12 coding style
+- Follow PSR-12 coding style, enforced by **Laravel Pint**
 - Use strict types: `declare(strict_types=1);` in every PHP file
 - Tests with **Pest PHP**
 - Type hints on all method parameters and return types
@@ -132,6 +132,15 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 - **Always use Laravel Prompts** (`use function Laravel\Prompts\...`) for all CLI interactions and output in commands. Never use `$this->info()`, `$this->warn()`, `$this->error()`, `$this->choice()`, `$this->ask()`, `$this->confirm()`, or `$this->table()` — use the equivalent Laravel Prompts functions: `info()`, `warning()`, `error()`, `select()`, `text()`, `confirm()`, `table()`, `note()`.
 - Shell scripts must be POSIX-compatible (sh, not bash-specific) where possible, bash when needed
 - Use TDD approach
+
+## Before Committing
+
+Always run these checks before committing:
+
+1. **Tests:** `composer test` (all tests must pass)
+2. **Code style:** `composer lint` (Laravel Pint must pass)
+
+If Pint reports issues, fix them with `composer lint:fix` and include the fixes in the commit.
 
 ## Config Design (`config/netsons-deploy.php`)
 

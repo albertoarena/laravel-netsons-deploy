@@ -5,7 +5,7 @@ declare(strict_types=1);
 use AlbertoArena\NetsonsDeploy\Services\EnvManager;
 
 beforeEach(function () {
-    $this->manager = new EnvManager();
+    $this->manager = new EnvManager;
 });
 
 describe('escapeForSed', function () {
@@ -177,7 +177,7 @@ describe('generateWorkflowSedBlock', function () {
         );
         // Secret values are escaped at runtime with printf + sed
         expect($result)->toContain("printf '%s' \"\${DB_PASSWORD}\"");
-        expect($result)->toContain("s/[|&\\\\]/\\\\&/g");
+        expect($result)->toContain('s/[|&\\\\]/\\\\&/g');
     });
 
     it('targets ENV_FILE variable', function () {

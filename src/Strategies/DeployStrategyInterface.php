@@ -10,17 +10,17 @@ interface DeployStrategyInterface
 
     /**
      * @param  array<string, mixed>  $config
-     * @return array<int, string>  List of validation errors
+     * @return array<int, string> List of validation errors
      */
     public function validate(array $config): array;
 
     /**
-     * @return array<int, string>  List of required GitHub secret names
+     * @return array<int, string> List of required GitHub secret names
      */
     public function requiredSecrets(): array;
 
     /**
-     * @return array<int, string>  List of required GitHub variable names
+     * @return array<int, string> List of required GitHub variable names
      */
     public function requiredVariables(): array;
 }

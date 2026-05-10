@@ -5,7 +5,7 @@ declare(strict_types=1);
 use AlbertoArena\NetsonsDeploy\Services\ReleaseManager;
 
 beforeEach(function () {
-    $this->manager = new ReleaseManager();
+    $this->manager = new ReleaseManager;
 });
 
 describe('generateTimestamp', function () {

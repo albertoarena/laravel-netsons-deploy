@@ -5,7 +5,7 @@ declare(strict_types=1);
 use AlbertoArena\NetsonsDeploy\Services\HtaccessGenerator;
 
 beforeEach(function () {
-    $this->generator = new HtaccessGenerator();
+    $this->generator = new HtaccessGenerator;
 });
 
 describe('generateRoot', function () {
