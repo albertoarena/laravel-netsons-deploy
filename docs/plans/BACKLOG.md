@@ -468,3 +468,39 @@ multiselect(
 | File | Changes |
 |------|---------|
 | `src/Commands/InstallCommand.php` | Update `hint` on both `multiselect()` calls in `collectDetectedEnvVars()` |
+
+---
+
+## B8: Skip duplicate check during reconfiguration in netsons:install
+
+**Priority:** UX fix
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+When a user runs `netsons:install --force` and chooses to reconfigure `netsons-deploy.json`, the manual entry prompts (build env, static, etc.) still check for duplicates against the existing JSON. This leads to a poor experience: the user types a variable name like `VITE_APP_NAME`, and gets `"VITE_APP_NAME" is already configured. Skipping.` — even though they explicitly chose to reconfigure.
+
+### Fix options
+
+**Option A: Clear JSON before reconfiguring**
+
+When the user confirms "Reconfigure?", reset `netsons-deploy.json` to defaults before collecting new values. This is the simplest approach — reconfigure means start fresh.
+
+**Option B: Pre-populate from existing values**
+
+During reconfiguration, pre-fill the multiselect and manual entry from the existing JSON values. The user sees what's already configured and can modify it. More complex but preserves existing config.
+
+**Option C: Skip duplicate check during install reconfigure**
+
+Pass a flag to the collect methods indicating "reconfigure mode" — in this mode, duplicates are silently overwritten instead of warned about. The `netsons:env add` command keeps its duplicate-check-with-update behavior since it's a standalone operation.
+
+### Recommendation
+
+**Option A** is simplest and matches user expectation — "Reconfigure" means "set up from scratch". The auto-detection from `.env.example` will re-suggest the same variables anyway.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Commands/InstallCommand.php` | Reset JSON data at start of `collectDeployJson()` when reconfiguring |
