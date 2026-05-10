@@ -11,6 +11,14 @@ use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
+use function Laravel\Prompts\confirm;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\table;
+use function Laravel\Prompts\text;
+use function Laravel\Prompts\warning;
+
 class InstallCommand extends Command
 {
     protected $signature = 'netsons:install
@@ -21,30 +29,27 @@ class InstallCommand extends Command
 
     public function handle(): int
     {
-        $this->info('');
-        $this->info('  Netsons Deploy — Installation');
-        $this->info('  =============================');
-        $this->info('');
+        note('Netsons Deploy — Installation');
 
         $strategy = $this->option('strategy')
             ?? ($this->input->isInteractive()
-                ? $this->choice('Which deployment strategy?', ['ftp', 'git'], 0)
+                ? select('Which deployment strategy?', ['ftp', 'git'], 'ftp')
                 : 'ftp');
 
         $configExists = File::exists(config_path('netsons-deploy.php'));
 
         if ($configExists) {
             if (! $this->shouldOverwrite()) {
-                $this->info('  Keeping existing config. Only updating displayed information.');
+                info('Keeping existing config. Only updating displayed information.');
                 $this->publishWorkflow($strategy);
                 $this->showRequiredSecrets($strategy);
                 $this->showRequiredVariables($strategy);
-                $this->showNextSteps($strategy);
+                $this->showNextSteps();
 
                 return self::SUCCESS;
             }
 
-            $this->info('  Overwriting existing config file...');
+            info('Overwriting existing config file...');
         }
 
         $this->publishConfig($strategy);
@@ -52,7 +57,7 @@ class InstallCommand extends Command
         $this->publishWorkflow($strategy);
         $this->showRequiredSecrets($strategy);
         $this->showRequiredVariables($strategy);
-        $this->showNextSteps($strategy);
+        $this->showNextSteps();
 
         return self::SUCCESS;
     }
@@ -67,7 +72,7 @@ class InstallCommand extends Command
             return false;
         }
 
-        return $this->confirm('  Config file already exists. Overwrite?', false);
+        return confirm('Config file already exists. Overwrite?', false);
     }
 
     protected function publishConfig(string $strategy): void
@@ -79,7 +84,7 @@ class InstallCommand extends Command
 
         $this->updateConfigStrategy($strategy);
 
-        $this->info('  Config published to config/netsons-deploy.php');
+        info('Config published to config/netsons-deploy.php');
     }
 
     protected function updateConfigStrategy(string $strategy): void
@@ -113,106 +118,107 @@ class InstallCommand extends Command
 
         // Skip if JSON already exists and user doesn't want to reconfigure
         if ($manager->exists()) {
-            if (! $this->confirm('  netsons-deploy.json already exists. Reconfigure?', false)) {
+            if (! confirm('netsons-deploy.json already exists. Reconfigure?', false)) {
                 return;
             }
         }
 
-        $this->info('');
-        $this->info('  Environment variable setup');
-        $this->info('  -------------------------');
+        note('Environment variable setup');
 
         // Secret-backed env vars
-        if ($this->confirm('  Add secret-backed .env variables (from GitHub Secrets)?', false)) {
+        if (confirm('Add secret-backed .env variables (from GitHub Secrets)?', false)) {
             $this->collectEnvMappings($manager);
         }
 
         // Static env vars
-        if ($this->confirm('  Add static .env variables (fixed values)?', false)) {
+        if (confirm('Add static .env variables (fixed values)?', false)) {
             $this->collectEnvStatic($manager);
         }
 
         // Build env vars
-        if ($this->confirm('  Add build environment variables (e.g., VITE_APP_NAME)?', false)) {
+        if (confirm('Add build environment variables (e.g., VITE_APP_NAME)?', false)) {
             $this->collectBuildEnv($manager);
         }
 
         // Custom commands
-        if ($this->confirm('  Add custom post-deploy artisan commands?', false)) {
+        if (confirm('Add custom post-deploy artisan commands?', false)) {
             $this->collectCustomCommands($manager);
         }
 
         // Slack notifications
-        if ($this->confirm('  Enable Slack deploy notifications?', false)) {
-            $secretName = $this->ask('  GitHub Secret name for Slack webhook URL', 'SLACK_WEBHOOK_DEBUG');
+        if (confirm('Enable Slack deploy notifications?', false)) {
+            $secretName = text(
+                label: 'GitHub Secret name for Slack webhook URL',
+                default: 'SLACK_WEBHOOK_DEBUG',
+            );
             $manager->setSlackWebhook($secretName);
         }
 
-        $this->info('  Configuration saved to netsons-deploy.json');
+        info('Configuration saved to netsons-deploy.json');
     }
 
     protected function collectEnvMappings(DeployConfigManager $manager): void
     {
         do {
-            $envKey = $this->ask('  ENV variable name (e.g., DB_PASSWORD)');
+            $envKey = text('ENV variable name (e.g., DB_PASSWORD)');
 
-            if ($envKey === null || $envKey === '') {
+            if ($envKey === '') {
                 break;
             }
 
-            $secretName = $this->ask('  GitHub Secret name', $envKey);
+            $secretName = text(
+                label: 'GitHub Secret name',
+                default: $envKey,
+            );
             $manager->addEnvMapping($envKey, $secretName);
-            $this->info("    Added: {$envKey} -> secrets.{$secretName}");
-        } while ($this->confirm('  Add another secret-backed variable?', false));
+            info("Added: {$envKey} -> secrets.{$secretName}");
+        } while (confirm('Add another secret-backed variable?', false));
     }
 
     protected function collectEnvStatic(DeployConfigManager $manager): void
     {
         do {
-            $envKey = $this->ask('  ENV variable name (e.g., SESSION_DRIVER)');
+            $envKey = text('ENV variable name (e.g., SESSION_DRIVER)');
 
-            if ($envKey === null || $envKey === '') {
+            if ($envKey === '') {
                 break;
             }
 
-            $value = $this->ask('  Value');
+            $value = text('Value');
             $manager->addEnvStatic($envKey, $value);
-            $this->info("    Added: {$envKey}={$value}");
-        } while ($this->confirm('  Add another static variable?', false));
+            info("Added: {$envKey}={$value}");
+        } while (confirm('Add another static variable?', false));
     }
 
     protected function collectBuildEnv(DeployConfigManager $manager): void
     {
         do {
-            $envKey = $this->ask('  ENV variable name (e.g., VITE_APP_NAME)');
+            $envKey = text('ENV variable name (e.g., VITE_APP_NAME)');
 
-            if ($envKey === null || $envKey === '') {
+            if ($envKey === '') {
                 break;
             }
 
-            $value = $this->ask('  Value');
+            $value = text('Value');
             $manager->addBuildEnv($envKey, $value);
-            $this->info("    Added: {$envKey}={$value}");
-        } while ($this->confirm('  Add another build variable?', false));
+            info("Added: {$envKey}={$value}");
+        } while (confirm('Add another build variable?', false));
     }
 
     protected function collectCustomCommands(DeployConfigManager $manager): void
     {
-        $this->info('  Common commands:');
-        $this->info('    - event-sourcing:cache-event-handlers 2>/dev/null || true');
-        $this->info('    - permission:cache-reset');
-        $this->info('    - horizon:terminate');
+        note("Common commands:\n  - event-sourcing:cache-event-handlers 2>/dev/null || true\n  - permission:cache-reset\n  - horizon:terminate");
 
         do {
-            $command = $this->ask('  Artisan command (without "artisan" prefix)');
+            $command = text('Artisan command (without "artisan" prefix)');
 
-            if ($command === null || $command === '') {
+            if ($command === '') {
                 break;
             }
 
             $manager->addCustomCommand($command);
-            $this->info("    Added: artisan {$command}");
-        } while ($this->confirm('  Add another command?', false));
+            info("Added: artisan {$command}");
+        } while (confirm('Add another command?', false));
     }
 
     protected function publishWorkflow(string $strategy): void
@@ -221,13 +227,13 @@ class InstallCommand extends Command
         $stubPath = __DIR__.'/../../stubs/workflows/deploy.yml.stub';
 
         if (File::exists($workflowPath) && ! $this->option('force')) {
-            $this->info('  Workflow .github/workflows/deploy.yml already exists (use --force to overwrite).');
+            info('Workflow .github/workflows/deploy.yml already exists (use --force to overwrite).');
 
             return;
         }
 
         if (! File::exists($stubPath)) {
-            $this->warn('  Workflow stub not found.');
+            warning('Workflow stub not found.');
 
             return;
         }
@@ -291,7 +297,7 @@ class InstallCommand extends Command
 
         File::put($workflowPath, $contents);
 
-        $this->info('  Workflow published to .github/workflows/deploy.yml');
+        info('Workflow published to .github/workflows/deploy.yml');
     }
 
     protected function resolvePhpVersion(array $config): string
@@ -418,9 +424,8 @@ YAML;
     {
         $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
 
-        $this->info('');
-        $this->info('  Required GitHub Secrets:');
-        $this->table(
+        note('Required GitHub Secrets:');
+        table(
             ['Secret', 'Description'],
             collect($strategyInstance->requiredSecrets())->map(fn (string $secret) => [
                 $secret,
@@ -433,9 +438,8 @@ YAML;
     {
         $strategyInstance = $strategy === 'git' ? new GitStrategy() : new FtpStrategy();
 
-        $this->info('');
-        $this->info('  Required GitHub Variables:');
-        $this->table(
+        note('Required GitHub Variables:');
+        table(
             ['Variable', 'Description'],
             collect($strategyInstance->requiredVariables())->map(fn (string $variable) => [
                 $variable,
@@ -444,15 +448,9 @@ YAML;
         );
     }
 
-    protected function showNextSteps(string $strategy): void
+    protected function showNextSteps(): void
     {
-        $this->info('');
-        $this->info('  Next steps:');
-        $this->info('  1. Review .github/workflows/deploy.yml and adjust settings');
-        $this->info('  2. Add the required secrets to your GitHub repository');
-        $this->info('  3. Add the required variables to your GitHub repository');
-        $this->info('  4. Push to GitHub and trigger the workflow');
-        $this->info('');
+        note("Next steps:\n  1. Review .github/workflows/deploy.yml and adjust settings\n  2. Add the required secrets to your GitHub repository\n  3. Add the required variables to your GitHub repository\n  4. Push to GitHub and trigger the workflow");
     }
 
     protected function getSecretDescription(string $secret): string

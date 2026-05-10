@@ -128,7 +128,8 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 - Use strict types: `declare(strict_types=1);` in every PHP file
 - Tests with **Pest PHP**
 - Type hints on all method parameters and return types
-- No dependencies beyond Laravel framework (keep it lightweight)
+- No dependencies beyond Laravel framework and `laravel/prompts` (keep it lightweight)
+- **Always use Laravel Prompts** (`use function Laravel\Prompts\...`) for all CLI interactions and output in commands. Never use `$this->info()`, `$this->warn()`, `$this->error()`, `$this->choice()`, `$this->ask()`, `$this->confirm()`, or `$this->table()` — use the equivalent Laravel Prompts functions: `info()`, `warning()`, `error()`, `select()`, `text()`, `confirm()`, `table()`, `note()`.
 - Shell scripts must be POSIX-compatible (sh, not bash-specific) where possible, bash when needed
 - Use TDD approach
 

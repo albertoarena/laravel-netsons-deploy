@@ -92,10 +92,10 @@ describe('netsons:env', function () {
 describe('netsons:env add', function () {
     it('adds a secret-backed variable interactively', function () {
         $this->artisan('netsons:env', ['action' => 'add'])
-            ->expectsChoice('What type of variable?', 'Secret-backed (from GitHub Secrets)', [
-                'Secret-backed (from GitHub Secrets)',
-                'Static (fixed value)',
-                'Build (available during asset build)',
+            ->expectsChoice('What type of variable?', 'secret', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
             ])
             ->expectsQuestion('ENV variable name', 'DB_PASSWORD')
             ->expectsQuestion('GitHub Secret name (default: same as ENV name)', 'DB_PASSWORD')
@@ -107,10 +107,10 @@ describe('netsons:env add', function () {
 
     it('adds a static variable interactively', function () {
         $this->artisan('netsons:env', ['action' => 'add'])
-            ->expectsChoice('What type of variable?', 'Static (fixed value)', [
-                'Secret-backed (from GitHub Secrets)',
-                'Static (fixed value)',
-                'Build (available during asset build)',
+            ->expectsChoice('What type of variable?', 'static', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
             ])
             ->expectsQuestion('ENV variable name', 'SESSION_DRIVER')
             ->expectsQuestion('Value', 'database')
@@ -122,10 +122,10 @@ describe('netsons:env add', function () {
 
     it('adds a build env variable interactively', function () {
         $this->artisan('netsons:env', ['action' => 'add'])
-            ->expectsChoice('What type of variable?', 'Build (available during asset build)', [
-                'Secret-backed (from GitHub Secrets)',
-                'Static (fixed value)',
-                'Build (available during asset build)',
+            ->expectsChoice('What type of variable?', 'build', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
             ])
             ->expectsQuestion('ENV variable name', 'VITE_APP_NAME')
             ->expectsQuestion('Value', 'My App')
@@ -144,8 +144,8 @@ describe('netsons:env remove', function () {
 
         $this->artisan('netsons:env', ['action' => 'remove'])
             ->expectsChoice('Which variable to remove?', 'DB_DATABASE (secret: DB_DATABASE)', [
-                'DB_DATABASE (secret: DB_DATABASE)',
-                'DB_USERNAME (secret: DB_USERNAME)',
+                'DB_DATABASE (secret: DB_DATABASE)' => 'DB_DATABASE (secret: DB_DATABASE)',
+                'DB_USERNAME (secret: DB_USERNAME)' => 'DB_USERNAME (secret: DB_USERNAME)',
             ])
             ->assertSuccessful();
 

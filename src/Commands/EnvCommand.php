@@ -7,6 +7,14 @@ namespace AlbertoArena\NetsonsDeploy\Commands;
 use AlbertoArena\NetsonsDeploy\Services\DeployConfigManager;
 use Illuminate\Console\Command;
 
+use function Laravel\Prompts\error;
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\select;
+use function Laravel\Prompts\table;
+use function Laravel\Prompts\text;
+use function Laravel\Prompts\warning;
+
 class EnvCommand extends Command
 {
     protected $signature = 'netsons:env
@@ -32,10 +40,7 @@ class EnvCommand extends Command
 
     protected function listVariables(): int
     {
-        $this->info('');
-        $this->info('  Netsons Deploy — Environment Configuration');
-        $this->info('  ===========================================');
-        $this->info('');
+        note('Netsons Deploy — Environment Configuration');
 
         $data = $this->configManager->read();
         $hasAny = false;
@@ -43,8 +48,8 @@ class EnvCommand extends Command
         // Secret-backed variables
         if (! empty($data['env_mapping'])) {
             $hasAny = true;
-            $this->info('  Secret-backed variables (from GitHub Secrets):');
-            $this->table(
+            info('Secret-backed variables (from GitHub Secrets):');
+            table(
                 ['ENV Variable', 'GitHub Secret'],
                 collect($data['env_mapping'])->map(fn (string $secret, string $key) => [$key, $secret])->values()->toArray()
             );
@@ -53,8 +58,8 @@ class EnvCommand extends Command
         // Static variables
         if (! empty($data['env_static'])) {
             $hasAny = true;
-            $this->info('  Static variables (fixed values):');
-            $this->table(
+            info('Static variables (fixed values):');
+            table(
                 ['ENV Variable', 'Value'],
                 collect($data['env_static'])->map(fn (string $value, string $key) => [$key, $value])->values()->toArray()
             );
@@ -63,8 +68,8 @@ class EnvCommand extends Command
         // Build env variables
         if (! empty($data['build_env'])) {
             $hasAny = true;
-            $this->info('  Build variables (available during asset build):');
-            $this->table(
+            info('Build variables (available during asset build):');
+            table(
                 ['ENV Variable', 'Value'],
                 collect($data['build_env'])->map(fn (string $value, string $key) => [$key, $value])->values()->toArray()
             );
@@ -73,8 +78,8 @@ class EnvCommand extends Command
         // Custom commands
         if (! empty($data['custom_commands'])) {
             $hasAny = true;
-            $this->info('  Custom post-deploy commands:');
-            $this->table(
+            info('Custom post-deploy commands:');
+            table(
                 ['Command'],
                 collect($data['custom_commands'])->map(fn (string $cmd) => [$cmd])->toArray()
             );
@@ -84,65 +89,64 @@ class EnvCommand extends Command
         $webhookSecret = $data['notifications']['slack_webhook_secret'] ?? '';
         if ($webhookSecret !== '') {
             $hasAny = true;
-            $this->info('  Notifications:');
-            $this->table(
+            info('Notifications:');
+            table(
                 ['Type', 'Secret'],
                 [['Slack webhook', $webhookSecret]]
             );
         }
 
         if (! $hasAny) {
-            $this->info('  No custom environment variables configured.');
-            $this->info('  Run "php artisan netsons:env add" to add variables.');
+            warning('No custom environment variables configured.');
+            info('Run "php artisan netsons:env add" to add variables.');
         }
-
-        $this->info('');
 
         return self::SUCCESS;
     }
 
     protected function addVariable(): int
     {
-        $types = [
-            'Secret-backed (from GitHub Secrets)',
-            'Static (fixed value)',
-            'Build (available during asset build)',
-        ];
-
-        $type = $this->choice('What type of variable?', $types);
+        $type = select('What type of variable?', [
+            'secret' => 'Secret-backed (from GitHub Secrets)',
+            'static' => 'Static (fixed value)',
+            'build' => 'Build (available during asset build)',
+        ]);
 
         match ($type) {
-            'Secret-backed (from GitHub Secrets)' => $this->addSecretBacked(),
-            'Static (fixed value)' => $this->addStatic(),
-            'Build (available during asset build)' => $this->addBuild(),
+            'secret' => $this->addSecretBacked(),
+            'static' => $this->addStatic(),
+            'build' => $this->addBuild(),
         };
 
-        $this->info('  Variable added to netsons-deploy.json.');
-        $this->info('  Run "php artisan netsons:install --force" to regenerate the workflow.');
+        info('Variable added to netsons-deploy.json.');
+        note('Run "php artisan netsons:install --force" to regenerate the workflow.');
 
         return self::SUCCESS;
     }
 
     protected function addSecretBacked(): void
     {
-        $envKey = $this->ask('ENV variable name');
-        $secretName = $this->ask('GitHub Secret name (default: same as ENV name)', $envKey);
+        $envKey = text('ENV variable name');
+        $secretName = text(
+            label: 'GitHub Secret name (default: same as ENV name)',
+            default: $envKey,
+        );
 
         $this->configManager->addEnvMapping($envKey, $secretName);
     }
 
     protected function addStatic(): void
     {
-        $envKey = $this->ask('ENV variable name');
-        $value = $this->ask('Value');
+        $envKey = text('ENV variable name');
+        $value = text('Value');
 
         $this->configManager->addEnvStatic($envKey, $value);
     }
 
     protected function addBuild(): void
     {
-        $envKey = $this->ask('ENV variable name');
-        $value = $this->ask('Value');
+        $envKey = text('ENV variable name');
+        $value = text('Value');
 
         $this->configManager->addBuildEnv($envKey, $value);
     }
@@ -153,22 +157,22 @@ class EnvCommand extends Command
         $choices = [];
 
         foreach ($data['env_mapping'] as $key => $secret) {
-            $choices[] = "{$key} (secret: {$secret})";
+            $choices["{$key} (secret: {$secret})"] = "{$key} (secret: {$secret})";
         }
         foreach ($data['env_static'] as $key => $value) {
-            $choices[] = "{$key} (static: {$value})";
+            $choices["{$key} (static: {$value})"] = "{$key} (static: {$value})";
         }
         foreach ($data['build_env'] as $key => $value) {
-            $choices[] = "{$key} (build: {$value})";
+            $choices["{$key} (build: {$value})"] = "{$key} (build: {$value})";
         }
 
         if (empty($choices)) {
-            $this->info('  No variables configured to remove.');
+            warning('No variables configured to remove.');
 
             return self::SUCCESS;
         }
 
-        $selected = $this->choice('Which variable to remove?', $choices);
+        $selected = select('Which variable to remove?', $choices);
 
         // Parse the selection to determine type and key
         if (preg_match('/^(\S+)\s+\(secret:/', $selected, $matches)) {
@@ -179,15 +183,15 @@ class EnvCommand extends Command
             $this->configManager->removeBuildEnv($matches[1]);
         }
 
-        $this->info('  Variable removed from netsons-deploy.json.');
-        $this->info('  Run "php artisan netsons:install --force" to regenerate the workflow.');
+        info('Variable removed from netsons-deploy.json.');
+        note('Run "php artisan netsons:install --force" to regenerate the workflow.');
 
         return self::SUCCESS;
     }
 
     protected function invalidAction(string $action): int
     {
-        $this->error("  Unknown action: {$action}. Use list, add, or remove.");
+        error("Unknown action: {$action}. Use list, add, or remove.");
 
         return self::FAILURE;
     }

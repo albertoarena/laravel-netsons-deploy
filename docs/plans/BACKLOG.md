@@ -5,8 +5,9 @@
 ## B1: Adopt Laravel Prompts for interactive commands
 
 **Priority:** Enhancement
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### What
 

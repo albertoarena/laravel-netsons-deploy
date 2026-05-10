@@ -10,6 +10,11 @@ use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 
+use function Laravel\Prompts\info;
+use function Laravel\Prompts\note;
+use function Laravel\Prompts\table;
+use function Laravel\Prompts\warning;
+
 class CheckCommand extends Command
 {
     protected $signature = 'netsons:check';
@@ -18,10 +23,7 @@ class CheckCommand extends Command
 
     public function handle(): int
     {
-        $this->info('');
-        $this->info('  Netsons Deploy — Configuration Check');
-        $this->info('  ====================================');
-        $this->info('');
+        note('Netsons Deploy — Configuration Check');
 
         $config = config('netsons-deploy');
         $strategy = $config['strategy'] ?? 'ftp';
@@ -39,8 +41,8 @@ class CheckCommand extends Command
 
     protected function showConfiguration(array $config, string $strategy): void
     {
-        $this->info('  Configuration:');
-        $this->table(
+        info('Configuration:');
+        table(
             ['Setting', 'Value'],
             [
                 ['Strategy', $strategy],
@@ -57,14 +59,13 @@ class CheckCommand extends Command
         $workflowPath = base_path('.github/workflows/deploy.yml');
         $exists = File::exists($workflowPath);
 
-        $this->info('');
-        $this->info('  Workflow File:');
+        info('Workflow File:');
 
         if ($exists) {
-            $this->info('    .github/workflows/deploy.yml — found');
+            note('.github/workflows/deploy.yml — found');
         } else {
-            $this->warn('    .github/workflows/deploy.yml — not found');
-            $this->info('    Run "php artisan netsons:install" to generate it.');
+            warning('.github/workflows/deploy.yml — not found');
+            note('Run "php artisan netsons:install" to generate it.');
         }
     }
 
@@ -73,17 +74,16 @@ class CheckCommand extends Command
         $jsonPath = base_path('netsons-deploy.json');
         $manager = new DeployConfigManager($jsonPath);
 
-        $this->info('');
-        $this->info('  Deploy Config (netsons-deploy.json):');
+        info('Deploy Config (netsons-deploy.json):');
 
         if (! $manager->exists()) {
-            $this->warn('    netsons-deploy.json — not found');
-            $this->info('    Run "php artisan netsons:env add" to configure environment variables.');
+            warning('netsons-deploy.json — not found');
+            note('Run "php artisan netsons:env add" to configure environment variables.');
 
             return;
         }
 
-        $this->info('    netsons-deploy.json — found');
+        note('netsons-deploy.json — found');
 
         $data = $manager->read();
 
@@ -119,15 +119,14 @@ class CheckCommand extends Command
         }
 
         if (! empty($rows)) {
-            $this->table(['Type', 'Key', 'Value/Source'], $rows);
+            table(['Type', 'Key', 'Value/Source'], $rows);
         }
     }
 
     protected function showSecrets(FtpStrategy|GitStrategy $strategy): void
     {
-        $this->info('');
-        $this->info('  Required GitHub Secrets:');
-        $this->table(
+        info('Required GitHub Secrets:');
+        table(
             ['Secret'],
             collect($strategy->requiredSecrets())->map(fn (string $s) => [$s])->toArray()
         );
@@ -135,9 +134,8 @@ class CheckCommand extends Command
 
     protected function showVariables(FtpStrategy|GitStrategy $strategy): void
     {
-        $this->info('');
-        $this->info('  Required GitHub Variables:');
-        $this->table(
+        info('Required GitHub Variables:');
+        table(
             ['Variable'],
             collect($strategy->requiredVariables())->map(fn (string $v) => [$v])->toArray()
         );
@@ -147,19 +145,15 @@ class CheckCommand extends Command
     {
         $errors = $strategy->validate($config);
 
-        $this->info('');
         if (empty($errors)) {
-            $this->info('  Local config: All checks passed.');
+            info('Local config: All checks passed.');
         } else {
-            $this->warn('  Validation Issues:');
+            warning('Validation Issues:');
             foreach ($errors as $error) {
-                $this->warn("    - {$error}");
+                warning("  - {$error}");
             }
         }
 
-        $this->info('');
-        $this->info('  Credentials (SSH, FTP, Git) are configured via GitHub Secrets/Variables,');
-        $this->info('  not in local config. See: https://albertoarena.github.io/laravel-netsons-deploy/getting-started/github-secrets/');
-        $this->info('');
+        note("Credentials (SSH, FTP, Git) are configured via GitHub Secrets/Variables,\nnot in local config. See: https://albertoarena.github.io/laravel-netsons-deploy/getting-started/github-secrets/");
     }
 }
