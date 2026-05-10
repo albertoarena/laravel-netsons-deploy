@@ -83,4 +83,32 @@ describe('netsons:check', function () {
         @rmdir(base_path('.github/workflows'));
         @rmdir(base_path('.github'));
     });
+
+    it('shows netsons-deploy.json as not found when missing', function () {
+        $jsonPath = base_path('netsons-deploy.json');
+        if (File::exists($jsonPath)) {
+            File::delete($jsonPath);
+        }
+
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('netsons-deploy.json')
+            ->expectsOutputToContain('not found')
+            ->assertSuccessful();
+    });
+
+    it('shows netsons-deploy.json status when file exists', function () {
+        $jsonPath = base_path('netsons-deploy.json');
+        File::put($jsonPath, json_encode([
+            'env_mapping' => ['DB_PASSWORD' => 'DB_PASSWORD'],
+            'env_static' => ['SESSION_DRIVER' => 'database'],
+            'custom_commands' => ['permission:cache-reset'],
+        ]));
+
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('netsons-deploy.json')
+            ->expectsOutputToContain('DB_PASSWORD')
+            ->assertSuccessful();
+
+        File::delete($jsonPath);
+    });
 });

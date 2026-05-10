@@ -74,4 +74,9 @@ describe('netsons-deploy config', function () {
         $config = require __DIR__.'/../../config/netsons-deploy.php';
         expect($config['environments'])->toHaveKeys(['stage', 'production']);
     });
+
+    it('defaults FTP root_path to empty string', function () {
+        $config = require __DIR__.'/../../config/netsons-deploy.php';
+        expect($config['ftp']['root_path'])->toBe('');
+    });
 });

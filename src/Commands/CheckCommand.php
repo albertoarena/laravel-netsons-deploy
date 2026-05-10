@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace AlbertoArena\NetsonsDeploy\Commands;
 
+use AlbertoArena\NetsonsDeploy\Services\DeployConfigManager;
 use AlbertoArena\NetsonsDeploy\Strategies\FtpStrategy;
 use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 use Illuminate\Console\Command;
@@ -28,6 +29,7 @@ class CheckCommand extends Command
 
         $this->showConfiguration($config, $strategy);
         $this->showWorkflowStatus();
+        $this->showDeployJsonStatus();
         $this->showSecrets($strategyInstance);
         $this->showVariables($strategyInstance);
         $this->showValidation($strategyInstance, $config);
@@ -63,6 +65,61 @@ class CheckCommand extends Command
         } else {
             $this->warn('    .github/workflows/deploy.yml — not found');
             $this->info('    Run "php artisan netsons:install" to generate it.');
+        }
+    }
+
+    protected function showDeployJsonStatus(): void
+    {
+        $jsonPath = base_path('netsons-deploy.json');
+        $manager = new DeployConfigManager($jsonPath);
+
+        $this->info('');
+        $this->info('  Deploy Config (netsons-deploy.json):');
+
+        if (! $manager->exists()) {
+            $this->warn('    netsons-deploy.json — not found');
+            $this->info('    Run "php artisan netsons:env add" to configure environment variables.');
+
+            return;
+        }
+
+        $this->info('    netsons-deploy.json — found');
+
+        $data = $manager->read();
+
+        $rows = [];
+
+        if (! empty($data['env_mapping'])) {
+            foreach ($data['env_mapping'] as $key => $secret) {
+                $rows[] = ['Secret-backed', $key, "secrets.{$secret}"];
+            }
+        }
+
+        if (! empty($data['env_static'])) {
+            foreach ($data['env_static'] as $key => $value) {
+                $rows[] = ['Static', $key, $value];
+            }
+        }
+
+        if (! empty($data['build_env'])) {
+            foreach ($data['build_env'] as $key => $value) {
+                $rows[] = ['Build', $key, $value];
+            }
+        }
+
+        if (! empty($data['custom_commands'])) {
+            foreach ($data['custom_commands'] as $command) {
+                $rows[] = ['Command', 'artisan '.$command, ''];
+            }
+        }
+
+        $webhookSecret = $data['notifications']['slack_webhook_secret'] ?? '';
+        if ($webhookSecret !== '') {
+            $rows[] = ['Notification', 'Slack', "secrets.{$webhookSecret}"];
+        }
+
+        if (! empty($rows)) {
+            $this->table(['Type', 'Key', 'Value/Source'], $rows);
         }
     }
 

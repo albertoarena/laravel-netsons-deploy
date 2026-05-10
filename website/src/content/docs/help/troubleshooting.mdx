@@ -71,6 +71,14 @@ Use the full path with the correct PHP binary:
 
 Verify FTP credentials in cPanel > Files > FTP Accounts.
 
+### Files uploaded to wrong directory
+
+This happens when the FTP account root directory doesn't match the expected path. For example, if FTP root is `/home/user/mysite.com/` but the workflow assumes `/home/user/`, files end up nested incorrectly.
+
+**Fix:** Set the `ftp.root_path` in `config/netsons-deploy.php` to match your FTP account root, or change the FTP account root in cPanel > Files > FTP Accounts.
+
+See [FTP Strategy — FTP Root Path](/laravel-netsons-deploy/strategies/ftp/#ftp-root-path) for details.
+
 ### Files not updating
 
 The FTP action uses incremental sync. Check that `server-dir` is correct and the FTP user has write permissions.
@@ -93,15 +101,15 @@ ssh -p 65100 user@server "chmod -R 775 ~/public_html/shared/storage"
 
 ### ".env not found" or "APP_KEY not set"
 
-The shared `.env` is created from `.env.example` on first deploy. SSH in and configure it:
+The shared `.env` is created from `.env.example` on first deploy. The workflow automatically runs `key:generate` on first deploy. If you need to regenerate manually:
 
 ```bash
-ssh -p 65100 user@server
-cd ~/public_html/current
-/usr/local/bin/ea-php84 artisan key:generate
+ssh -p 65100 user@server "cd ~/public_html/current && /usr/local/bin/ea-php84 artisan key:generate"
 ```
 
-Then edit `~/public_html/shared/.env` with your database and other credentials.
+### .env values with special characters
+
+Passwords or values containing `&`, `|`, `\`, or `"` are properly escaped during deployment. If you encounter issues, verify the value in `~/public_html/shared/.env` on the server.
 
 ## .htaccess
 

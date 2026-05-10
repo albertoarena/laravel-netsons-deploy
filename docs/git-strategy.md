@@ -4,13 +4,14 @@ The Git strategy clones your repository directly on the server via SSH and insta
 
 ## How It Works
 
-1. **Build** — GitHub Actions builds Node assets locally
+1. **Build** — GitHub Actions builds Node assets locally (with dependency caching for faster builds)
 2. **Clone** — The repository is cloned on the server via SSH (`git clone --depth 1`)
 3. **Install** — Composer dependencies are installed on the server using the Netsons PHP binary
 4. **Upload assets** — Built CSS/JS assets are uploaded to the server via SCP
-5. **Post-deploy** — Symlinks are set up, migrations run, caches rebuilt
-6. **Switch** — The `current` symlink is updated to point to the new release
-7. **Cleanup** — Old releases beyond the keep count are removed
+5. **First deploy** — If first deploy, generates `APP_KEY` and runs configured seeders
+6. **Post-deploy** — Symlinks are set up, `.env` values updated, migrations run, caches rebuilt
+7. **Switch** — The `current` symlink is updated to point to the new release
+8. **Cleanup** — Old releases beyond the keep count are removed, SSH agent cleaned up
 
 ## When to Use
 

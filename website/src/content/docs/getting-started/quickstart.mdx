@@ -21,13 +21,28 @@ This will:
 - Generate `.github/workflows/deploy.yml` with your settings
 - Show the required GitHub Secrets and Variables
 
-## 3. Configure GitHub Secrets
+## 3. Configure environment variables
+
+Add any custom `.env` variables your project needs:
+
+```bash
+php artisan netsons:env add
+```
+
+Variable types:
+- **Secret-backed** — values from GitHub Secrets (e.g., `DB_PASSWORD`)
+- **Static** — fixed values (e.g., `SESSION_DRIVER=database`)
+- **Build** — available during asset build (e.g., `VITE_APP_NAME`)
+
+Then regenerate the workflow:
+
+```bash
+php artisan netsons:install --force
+```
+
+## 4. Configure GitHub Secrets
 
 Add the required secrets to your GitHub repository under **Settings > Secrets and variables > Actions**. See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/) for the full list.
-
-## 4. Review the workflow
-
-Review `.github/workflows/deploy.yml` and adjust any settings if needed.
 
 ## 5. Deploy
 
@@ -39,6 +54,17 @@ Check your configuration is correct:
 
 ```bash
 php artisan netsons:check
+```
+
+## Managing env variables later
+
+Use `netsons:env` to add or remove variables at any time:
+
+```bash
+php artisan netsons:env              # List all
+php artisan netsons:env add          # Add new
+php artisan netsons:env remove       # Remove existing
+php artisan netsons:install --force  # Regenerate workflow
 ```
 
 ## Switching strategies

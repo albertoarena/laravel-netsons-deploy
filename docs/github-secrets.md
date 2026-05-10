@@ -28,6 +28,26 @@ Secrets are encrypted and not visible after creation.
 | `FTP_PASS` | FTP password | `your-cpanel-password` |
 | `FTP_PORT` | FTP port | `21` |
 
+### Custom Env Variables
+
+Any secret-backed env variables configured in `netsons-deploy.json` must also be added as secrets. For example:
+
+| Secret | Description |
+|---|---|
+| `DB_DATABASE` | Database name |
+| `DB_USERNAME` | Database username |
+| `DB_PASSWORD` | Database password |
+
+Use `php artisan netsons:env list` to see all configured secrets, or `php artisan netsons:env add` to add new ones.
+
+### Notifications (Optional)
+
+| Secret | Description |
+|---|---|
+| `SLACK_WEBHOOK_DEBUG` | Slack webhook URL for deploy notifications |
+
+The secret name is configurable via `netsons-deploy.json` notifications settings.
+
 ## Variables
 
 Variables are visible in plain text. Do not store sensitive data here.

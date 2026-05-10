@@ -52,10 +52,20 @@ The remote directory relative to your home directory where the application is de
     'user' => env('NETSONS_FTP_USER'),
     'password' => env('NETSONS_FTP_PASS'),
     'protocol' => env('NETSONS_FTP_PROTOCOL', 'ftp'),
+    'root_path' => env('NETSONS_FTP_ROOT_PATH', ''),
 ],
 ```
 
 Only used with the FTP strategy. The FTP credentials are typically the same as your cPanel login.
+
+### FTP Root Path
+
+The `root_path` controls how the FTP `server-dir` is computed. This depends on your FTP account's root directory:
+
+- **Empty (default)** — FTP root is your home directory (`/home/user/`). The workflow uses `DEPLOY_PATH/releases/...` as server-dir.
+- **Set to site directory** — FTP root is scoped to the site (`/home/user/mysite.com/`). The workflow uses `releases/...` as server-dir, since `DEPLOY_PATH` is already part of the FTP root.
+
+Check your FTP root in cPanel > Files > FTP Accounts > Configure FTP Client.
 
 ## Git Settings
 
@@ -115,6 +125,8 @@ Per-environment overrides. Currently supports toggling the root `.htaccess` gene
 
 Maps `.env` keys to GitHub secret names. During deployment, values from GitHub secrets are injected into the shared `.env` file.
 
+> **Note:** The `env_mapping` in the PHP config is used for reference. The actual env variable management is handled via `netsons-deploy.json`. See [netsons-deploy.json](#netsons-deployjson) below.
+
 ## Post-Deploy
 
 ```php
@@ -129,7 +141,7 @@ Maps `.env` keys to GitHub secret names. During deployment, values from GitHub s
 ],
 ```
 
-Toggle individual post-deploy steps. All are enabled by default.
+Toggle individual post-deploy steps. All are enabled by default. The workflow always runs `package:discover --ansi` before cache commands.
 
 ## Seeders
 
@@ -141,3 +153,107 @@ Toggle individual post-deploy steps. All are enabled by default.
 ```
 
 Seeder classes to run on the **first deploy only**. A `.first_deploy` flag file is created on initial setup and removed after seeders run.
+
+---
+
+## netsons-deploy.json
+
+The `netsons-deploy.json` file in your project root stores additional deployment configuration that the workflow generator uses. It is created by `netsons:install` and managed by `netsons:env`.
+
+### Schema
+
+```json
+{
+    "env_mapping": {
+        "DB_DATABASE": "DB_DATABASE",
+        "DB_USERNAME": "DB_USERNAME",
+        "DB_PASSWORD": "DB_PASSWORD"
+    },
+    "env_static": {
+        "SESSION_DRIVER": "database",
+        "LARAVEL_PDF_DRIVER": "dompdf"
+    },
+    "build_env": {
+        "VITE_APP_NAME": "My App"
+    },
+    "custom_commands": [
+        "event-sourcing:cache-event-handlers 2>/dev/null || true"
+    ],
+    "notifications": {
+        "slack_webhook_secret": "SLACK_WEBHOOK_DEBUG"
+    }
+}
+```
+
+### env_mapping
+
+Maps `.env` variable names to GitHub Secret names. During deployment, values are fetched from GitHub Secrets and injected into the remote `.env` file using sed with proper escaping for special characters.
+
+```json
+"env_mapping": {
+    "DB_DATABASE": "DB_DATABASE",
+    "DB_USERNAME": "DB_USERNAME",
+    "DB_PASSWORD": "PROD_DB_PASS"
+}
+```
+
+The key is the `.env` variable name, the value is the GitHub Secret name. They can differ (e.g., `DB_PASSWORD` mapped to `PROD_DB_PASS`).
+
+### env_static
+
+Static `.env` values that are fixed per deployment (not from secrets). These are written directly into the workflow.
+
+```json
+"env_static": {
+    "SESSION_DRIVER": "database",
+    "LARAVEL_PDF_DRIVER": "dompdf",
+    "CACHE_STORE": "file"
+}
+```
+
+### build_env
+
+Environment variables available during the asset build step (`yarn build` / `npm run build`). Useful for Vite environment variables.
+
+```json
+"build_env": {
+    "VITE_APP_NAME": "My Application",
+    "VITE_API_URL": "https://api.example.com"
+}
+```
+
+### custom_commands
+
+Additional artisan commands to run during the post-deploy cache rebuild phase. These run after the standard cache commands and before `queue:restart`.
+
+```json
+"custom_commands": [
+    "event-sourcing:cache-event-handlers 2>/dev/null || true",
+    "permission:cache-reset",
+    "horizon:terminate"
+]
+```
+
+Common examples:
+
+| Package | Command |
+|---|---|
+| Spatie Event Sourcing | `event-sourcing:cache-event-handlers 2>/dev/null \|\| true` |
+| Spatie Permission | `permission:cache-reset` |
+| Laravel Horizon | `horizon:terminate` |
+| Laravel Telescope | `telescope:prune` |
+| Laravel Scout | `scout:sync-index-settings` |
+
+Use `2>/dev/null || true` for commands that may not be available in all environments.
+
+### notifications
+
+Optional Slack deploy notifications. When configured, the workflow sends a message on deploy success or failure.
+
+```json
+"notifications": {
+    "slack_webhook_secret": "SLACK_WEBHOOK_DEBUG"
+}
+```
+
+The value is the name of the GitHub Secret containing the Slack webhook URL. Add the `SLACK_WEBHOOK_DEBUG` (or your chosen name) secret to your GitHub repository.

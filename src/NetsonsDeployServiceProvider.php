@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace AlbertoArena\NetsonsDeploy;
 
 use AlbertoArena\NetsonsDeploy\Commands\CheckCommand;
+use AlbertoArena\NetsonsDeploy\Commands\EnvCommand;
 use AlbertoArena\NetsonsDeploy\Commands\InstallCommand;
 use Illuminate\Support\ServiceProvider;
 
@@ -26,6 +27,7 @@ class NetsonsDeployServiceProvider extends ServiceProvider
             $this->commands([
                 InstallCommand::class,
                 CheckCommand::class,
+                EnvCommand::class,
             ]);
         }
     }

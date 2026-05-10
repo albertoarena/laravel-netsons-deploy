@@ -7,12 +7,13 @@ The FTP strategy builds your application in the GitHub Actions runner and upload
 
 ## How It Works
 
-1. **Build** — GitHub Actions installs Composer dependencies and builds Node assets
+1. **Build** — GitHub Actions installs Composer dependencies and builds Node assets (with dependency caching)
 2. **Prepare** — A new release directory is created on the server via SSH, copying the current release as a base
 3. **Upload** — [SamKirkland/FTP-Deploy-Action](https://github.com/SamKirkland/FTP-Deploy-Action) syncs files incrementally
-4. **Post-deploy** — Symlinks are set up, migrations run, caches rebuilt
-5. **Switch** — The `current` symlink is updated to point to the new release
-6. **Cleanup** — Old releases beyond the keep count are removed
+4. **First deploy** — If first deploy, generates `APP_KEY` and runs configured seeders
+5. **Post-deploy** — Symlinks set up, `.env` values updated, migrations run, caches rebuilt
+6. **Switch** — The `current` symlink is updated to point to the new release
+7. **Cleanup** — Old releases removed, SSH agent cleaned up
 
 ## When to Use
 
@@ -23,6 +24,24 @@ The FTP strategy builds your application in the GitHub Actions runner and upload
 ## Required Secrets & Variables
 
 See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/) for the complete list. FTP strategy additionally requires `FTP_HOST`, `FTP_USER`, `FTP_PASS`, and `FTP_PORT` secrets.
+
+## FTP Root Path
+
+The FTP account root directory affects how files are uploaded:
+
+- **Home directory root (default)** — FTP root is `/home/user/`. The workflow uses `DEPLOY_PATH/releases/...`.
+- **Site-scoped root** — FTP root is `/home/user/mysite.com/`. The workflow uses `releases/...` directly.
+
+Set this in `config/netsons-deploy.php`:
+
+```php
+'ftp' => [
+    // ...
+    'root_path' => env('NETSONS_FTP_ROOT_PATH', '/home/user/mysite.com'),
+],
+```
+
+Check your FTP root in cPanel > Files > FTP Accounts > Configure FTP Client.
 
 ## Server Directory Structure
 
@@ -65,5 +84,6 @@ Set the strategy in `config/netsons-deploy.php`:
     'user' => env('NETSONS_FTP_USER'),
     'password' => env('NETSONS_FTP_PASS'),
     'protocol' => env('NETSONS_FTP_PROTOCOL', 'ftp'),
+    'root_path' => env('NETSONS_FTP_ROOT_PATH', ''),
 ],
 ```

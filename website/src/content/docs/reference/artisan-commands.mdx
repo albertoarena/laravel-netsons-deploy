@@ -1,6 +1,6 @@
 ---
 title: Artisan Commands
-description: Reference for netsons:install and netsons:check commands
+description: Reference for netsons:install, netsons:check, and netsons:env commands
 ---
 
 ## netsons:install
@@ -24,14 +24,15 @@ php artisan netsons:install [--strategy=ftp|git] [--force]
 ### What it does
 
 1. Publishes `config/netsons-deploy.php` with the selected strategy
-2. Generates `.github/workflows/deploy.yml` with placeholders replaced (strategy, PHP version, etc.)
-3. Displays required GitHub Secrets for the chosen strategy
-4. Displays required GitHub Variables
-5. Shows next steps
+2. Reads `netsons-deploy.json` for env variables, build vars, custom commands, and notifications
+3. Generates `.github/workflows/deploy.yml` with all placeholders replaced
+4. Displays required GitHub Secrets for the chosen strategy
+5. Displays required GitHub Variables
+6. Shows next steps
 
 ### Workflow generation
 
-The installer creates `.github/workflows/deploy.yml` from a stub template, replacing all placeholders with values derived from your config:
+The installer creates `.github/workflows/deploy.yml` from a stub template, replacing all placeholders with values derived from your config and `netsons-deploy.json`:
 
 - `%%STRATEGY%%` — the selected strategy (`ftp` or `git`)
 - `%%PHP_VERSION%%` — derived from the `php_binary` config (e.g., `ea-php84` becomes `8.4`)
@@ -39,6 +40,13 @@ The installer creates `.github/workflows/deploy.yml` from a stub template, repla
 - `%%PACKAGE_MANAGER%%` — defaults to `yarn`
 - `%%REMOTE_PHP%%` — the remote PHP binary path from config
 - `%%RELEASES_KEEP%%` — number of releases to keep from config
+- `%%FTP_SERVER_DIR%%` — computed from `ftp.root_path` config
+- `%%BUILD_ENV%%` — build environment variables from `netsons-deploy.json`
+- `%%ENV_MAPPING_ENV_BLOCK%%` — secret references from `netsons-deploy.json`
+- `%%ENV_MAPPING_SED_BLOCK%%` — sed commands for env updates
+- `%%SEEDERS%%` — first-deploy seeder commands from config
+- `%%CUSTOM_COMMANDS%%` — custom artisan commands from `netsons-deploy.json`
+- `%%NOTIFICATIONS%%` — Slack notification steps from `netsons-deploy.json`
 
 If `.github/workflows/deploy.yml` already exists, it is preserved unless `--force` is used.
 
@@ -80,32 +88,85 @@ The command displays:
 - **Local validation** — checks local config values (deploy path)
 - **Credentials reminder** — note that SSH, FTP, and Git credentials are configured via GitHub Secrets/Variables, not locally
 
-### Example output
-
-```
-  Netsons Deploy — Configuration Check
-  ====================================
-
-  Configuration:
-  +---------------+----------------------------+
-  | Setting       | Value                      |
-  +---------------+----------------------------+
-  | Strategy      | git                        |
-  | SSH Port      | 65100                      |
-  | PHP Binary    | /usr/local/bin/ea-php84    |
-  | Deploy Path   | public_html                |
-  | Releases Keep | 5                          |
-  +---------------+----------------------------+
-
-  Workflow File:
-    .github/workflows/deploy.yml — found
-
-  Local config: All checks passed.
-
-  Credentials (SSH, FTP, Git) are configured via GitHub Secrets/Variables,
-  not in local config.
-```
-
 ### What it does NOT check
 
 The check command does **not** validate SSH, FTP, or Git credentials. These values are stored as GitHub Secrets/Variables and are only available at deploy time in GitHub Actions. See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/) for setup instructions.
+
+---
+
+## netsons:env
+
+Manage custom environment variables for deployment without editing the workflow manually.
+
+### Usage
+
+```bash
+php artisan netsons:env [action]
+```
+
+### Actions
+
+| Action | Description |
+|---|---|
+| `list` (default) | Show all configured variables |
+| `add` | Add a new variable (interactive) |
+| `remove` | Remove a variable (interactive) |
+
+### List variables
+
+```bash
+php artisan netsons:env
+# or
+php artisan netsons:env list
+```
+
+Shows all configured variables grouped by type: secret-backed, static, build, custom commands, and notifications.
+
+### Add a variable
+
+```bash
+php artisan netsons:env add
+```
+
+Interactive prompts guide you through:
+1. **Variable type** — Secret-backed (from GitHub Secrets), Static (fixed value), or Build (for asset build)
+2. **Variable name** — The `.env` key (e.g., `DB_PASSWORD`)
+3. **Value or secret name** — Depending on the type
+
+### Remove a variable
+
+```bash
+php artisan netsons:env remove
+```
+
+Shows a list of all configured variables and lets you pick which to remove.
+
+### After changes
+
+After adding or removing variables, regenerate the workflow:
+
+```bash
+php artisan netsons:install --force
+```
+
+### Examples
+
+```bash
+# Add a database password from GitHub Secrets
+php artisan netsons:env add
+# → Secret-backed → DB_PASSWORD → DB_PASSWORD
+
+# Add a static config value
+php artisan netsons:env add
+# → Static → SESSION_DRIVER → database
+
+# Add a Vite build variable
+php artisan netsons:env add
+# → Build → VITE_APP_NAME → My Application
+
+# View all configured variables
+php artisan netsons:env list
+
+# Remove a variable
+php artisan netsons:env remove
+```

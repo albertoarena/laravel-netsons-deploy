@@ -84,6 +84,14 @@ Verify your FTP credentials in cPanel > Files > FTP Accounts. The FTP username i
 
 Large first-time uploads may time out. The FTP strategy copies the previous release first, so subsequent deploys only transfer changed files.
 
+### Files uploaded to wrong directory
+
+This happens when the FTP account root directory doesn't match the expected path. For example, if FTP root is `/home/user/mysite.com/` but the workflow assumes it's `/home/user/`, files end up at `mysite.com/DEPLOY_PATH/releases/` instead of `DEPLOY_PATH/releases/`.
+
+**Fix:** Set the `ftp.root_path` in `config/netsons-deploy.php` to match your FTP account root, or change the FTP account root in cPanel > Files > FTP Accounts.
+
+See [FTP Strategy — FTP Root Path](ftp-strategy.md#ftp-root-path) for details.
+
 ### Files not updating
 
 The FTP action uses incremental sync. If files seem stale, check:
@@ -115,15 +123,15 @@ ssh -p 65100 user@server "chmod -R 775 ~/public_html/shared/storage"
 
 ### ".env not found" or "APP_KEY not set"
 
-The shared `.env` is created from `.env.example` on first deploy. You need to:
-1. SSH into the server
-2. Edit `~/public_html/shared/.env`
-3. Set `APP_KEY`, database credentials, and other required values
+The shared `.env` is created from `.env.example` on first deploy. The workflow automatically runs `key:generate` on first deploy. If you need to regenerate manually:
 
-Generate an app key:
 ```bash
 ssh -p 65100 user@server "cd ~/public_html/current && /usr/local/bin/ea-php84 artisan key:generate"
 ```
+
+### .env values with special characters
+
+Passwords or values containing `&`, `|`, `\`, or `"` are properly escaped during deployment using sed with pipe delimiters. If you encounter issues, verify the value in `~/public_html/shared/.env` on the server.
 
 ## .htaccess Issues
 

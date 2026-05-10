@@ -51,6 +51,18 @@ jobs:
           extensions: mbstring, xml, ctype, json, bcmath, curl
           coverage: none
 
+      # ── Composer Cache ──────────────────────────────────────────────────
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
       # ── Composer Install ────────────────────────────────────────────────
       - name: Install Composer dependencies
         run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
@@ -60,6 +72,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: ${{ env.PACKAGE_MANAGER }}
 
       # ── Install Node dependencies ───────────────────────────────────────
       - name: Install Node dependencies
@@ -72,7 +85,7 @@ jobs:
 
       # ── Build assets ────────────────────────────────────────────────────
       - name: Build assets
-        run: |
+%%BUILD_ENV%%        run: |
           if [ "${{ env.PACKAGE_MANAGER }}" = "yarn" ]; then
             yarn build
           else
@@ -131,7 +144,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           local-dir: ./
-          server-dir: ${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}/
+          server-dir: %%FTP_SERVER_DIR%%
           exclude: |
             **/.git*
             **/.git*/**
@@ -201,6 +214,24 @@ jobs:
             ln -sfn ${DEPLOY_BASE}/shared/storage ${RELEASE_PATH}/storage
           REMOTE
 
+      # ── Generate app key on first deploy ────────────────────────────────
+      - name: Generate app key on first deploy
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          FIRST_DEPLOY=$(ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+            "[ -f ~/${{ vars.DEPLOY_PATH }}/.first_deploy ] && echo yes || echo no")
+          if [ "$FIRST_DEPLOY" = "yes" ]; then
+            ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
+              set -euo pipefail
+              cd ~/${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}
+              ${{ env.REMOTE_PHP }} artisan key:generate --force
+            REMOTE
+          fi
+
       # ── Update .env values ──────────────────────────────────────────────
       - name: Update .env values
         env:
@@ -211,15 +242,14 @@ jobs:
           APP_ENV: ${{ vars.APP_ENV }}
           APP_DEBUG: ${{ vars.APP_DEBUG }}
           APP_URL: ${{ vars.APP_URL }}
-        run: |
+%%ENV_MAPPING_ENV_BLOCK%%        run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
             set -euo pipefail
             ENV_FILE=~/${{ vars.DEPLOY_PATH }}/shared/.env
-            sed -i "s/^APP_ENV=.*/APP_ENV=${APP_ENV}/" \${ENV_FILE}
-            sed -i "s/^APP_DEBUG=.*/APP_DEBUG=${APP_DEBUG}/" \${ENV_FILE}
+            sed -i "s|^APP_ENV=.*|APP_ENV=${APP_ENV}|" \${ENV_FILE}
+            sed -i "s|^APP_DEBUG=.*|APP_DEBUG=${APP_DEBUG}|" \${ENV_FILE}
             sed -i "s|^APP_URL=.*|APP_URL=${APP_URL}|" \${ENV_FILE}
-            # Add more sed commands for additional env variables as needed
-          REMOTE
+%%ENV_MAPPING_SED_BLOCK%%          REMOTE
 
       # ── .htaccess (root) ────────────────────────────────────────────────
       - name: Upload root .htaccess
@@ -253,6 +283,22 @@ jobs:
             ${{ env.REMOTE_PHP }} artisan migrate --force --no-interaction
           REMOTE
 
+      # ── First-deploy seeders ────────────────────────────────────────────
+      - name: Run seeders on first deploy
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
+            set -euo pipefail
+            cd ~/${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}
+            if [ -f ~/${{ vars.DEPLOY_PATH }}/.first_deploy ]; then
+%%SEEDERS%%              rm ~/${{ vars.DEPLOY_PATH }}/.first_deploy
+            fi
+          REMOTE
+
       # ── Cache management ────────────────────────────────────────────────
       - name: Rebuild caches
         env:
@@ -265,11 +311,12 @@ jobs:
             set -euo pipefail
             cd ~/${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}
             ${{ env.REMOTE_PHP }} artisan cache:clear
+            ${{ env.REMOTE_PHP }} artisan package:discover --ansi
             ${{ env.REMOTE_PHP }} artisan config:cache
             ${{ env.REMOTE_PHP }} artisan route:cache
             ${{ env.REMOTE_PHP }} artisan view:cache
             ${{ env.REMOTE_PHP }} artisan event:cache
-            ${{ env.REMOTE_PHP }} artisan queue:restart 2>/dev/null || true
+%%CUSTOM_COMMANDS%%            ${{ env.REMOTE_PHP }} artisan queue:restart 2>/dev/null || true
           REMOTE
 
       # ── Switch release ──────────────────────────────────────────────────
@@ -327,8 +374,15 @@ jobs:
             fi
           REMOTE
 
+%%NOTIFICATIONS%%      # ── SSH Cleanup ────────────────────────────────────────────────────────
+      - name: Cleanup SSH
+        if: always()
+        run: |
+          rm -f $HOME/.ssh/deploy_key /tmp/askpass.sh
+          [ -n "$SSH_AGENT_PID" ] && kill $SSH_AGENT_PID || true
+
       # ── Done ────────────────────────────────────────────────────────────
       - name: Deployment complete
         run: |
-          echo "✅ Deployed to ${{ github.event.inputs.environment }}"
+          echo "Deployed to ${{ github.event.inputs.environment }}"
           echo "   Release: ${{ steps.release.outputs.dir }}"

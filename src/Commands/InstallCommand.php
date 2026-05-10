@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace AlbertoArena\NetsonsDeploy\Commands;
 
+use AlbertoArena\NetsonsDeploy\Services\DeployConfigManager;
+use AlbertoArena\NetsonsDeploy\Services\EnvManager;
 use AlbertoArena\NetsonsDeploy\Strategies\FtpStrategy;
 use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 use Illuminate\Console\Command;
@@ -46,6 +48,7 @@ class InstallCommand extends Command
         }
 
         $this->publishConfig($strategy);
+        $this->collectDeployJson();
         $this->publishWorkflow($strategy);
         $this->showRequiredSecrets($strategy);
         $this->showRequiredVariables($strategy);
@@ -99,6 +102,119 @@ class InstallCommand extends Command
         File::put($configPath, $contents);
     }
 
+    protected function collectDeployJson(): void
+    {
+        if (! $this->input->isInteractive()) {
+            return;
+        }
+
+        $jsonPath = base_path('netsons-deploy.json');
+        $manager = new DeployConfigManager($jsonPath);
+
+        // Skip if JSON already exists and user doesn't want to reconfigure
+        if ($manager->exists()) {
+            if (! $this->confirm('  netsons-deploy.json already exists. Reconfigure?', false)) {
+                return;
+            }
+        }
+
+        $this->info('');
+        $this->info('  Environment variable setup');
+        $this->info('  -------------------------');
+
+        // Secret-backed env vars
+        if ($this->confirm('  Add secret-backed .env variables (from GitHub Secrets)?', false)) {
+            $this->collectEnvMappings($manager);
+        }
+
+        // Static env vars
+        if ($this->confirm('  Add static .env variables (fixed values)?', false)) {
+            $this->collectEnvStatic($manager);
+        }
+
+        // Build env vars
+        if ($this->confirm('  Add build environment variables (e.g., VITE_APP_NAME)?', false)) {
+            $this->collectBuildEnv($manager);
+        }
+
+        // Custom commands
+        if ($this->confirm('  Add custom post-deploy artisan commands?', false)) {
+            $this->collectCustomCommands($manager);
+        }
+
+        // Slack notifications
+        if ($this->confirm('  Enable Slack deploy notifications?', false)) {
+            $secretName = $this->ask('  GitHub Secret name for Slack webhook URL', 'SLACK_WEBHOOK_DEBUG');
+            $manager->setSlackWebhook($secretName);
+        }
+
+        $this->info('  Configuration saved to netsons-deploy.json');
+    }
+
+    protected function collectEnvMappings(DeployConfigManager $manager): void
+    {
+        do {
+            $envKey = $this->ask('  ENV variable name (e.g., DB_PASSWORD)');
+
+            if ($envKey === null || $envKey === '') {
+                break;
+            }
+
+            $secretName = $this->ask('  GitHub Secret name', $envKey);
+            $manager->addEnvMapping($envKey, $secretName);
+            $this->info("    Added: {$envKey} -> secrets.{$secretName}");
+        } while ($this->confirm('  Add another secret-backed variable?', false));
+    }
+
+    protected function collectEnvStatic(DeployConfigManager $manager): void
+    {
+        do {
+            $envKey = $this->ask('  ENV variable name (e.g., SESSION_DRIVER)');
+
+            if ($envKey === null || $envKey === '') {
+                break;
+            }
+
+            $value = $this->ask('  Value');
+            $manager->addEnvStatic($envKey, $value);
+            $this->info("    Added: {$envKey}={$value}");
+        } while ($this->confirm('  Add another static variable?', false));
+    }
+
+    protected function collectBuildEnv(DeployConfigManager $manager): void
+    {
+        do {
+            $envKey = $this->ask('  ENV variable name (e.g., VITE_APP_NAME)');
+
+            if ($envKey === null || $envKey === '') {
+                break;
+            }
+
+            $value = $this->ask('  Value');
+            $manager->addBuildEnv($envKey, $value);
+            $this->info("    Added: {$envKey}={$value}");
+        } while ($this->confirm('  Add another build variable?', false));
+    }
+
+    protected function collectCustomCommands(DeployConfigManager $manager): void
+    {
+        $this->info('  Common commands:');
+        $this->info('    - event-sourcing:cache-event-handlers 2>/dev/null || true');
+        $this->info('    - permission:cache-reset');
+        $this->info('    - horizon:terminate');
+
+        do {
+            $command = $this->ask('  Artisan command (without "artisan" prefix)');
+
+            if ($command === null || $command === '') {
+                break;
+            }
+
+            $manager->addCustomCommand($command);
+            $this->info("    Added: artisan {$command}");
+        } while ($this->confirm('  Add another command?', false));
+    }
+
     protected function publishWorkflow(string $strategy): void
     {
         $workflowPath = base_path('.github/workflows/deploy.yml');
@@ -119,14 +235,56 @@ class InstallCommand extends Command
         File::ensureDirectoryExists(dirname($workflowPath));
 
         $config = config('netsons-deploy') ?? [];
+        $jsonPath = base_path('netsons-deploy.json');
+        $deployConfig = (new DeployConfigManager($jsonPath))->read();
+        $envManager = new EnvManager();
 
         $contents = File::get($stubPath);
+
+        // Replace simple placeholders
         $contents = str_replace('%%STRATEGY%%', $strategy, $contents);
         $contents = str_replace('%%PHP_VERSION%%', $this->resolvePhpVersion($config), $contents);
         $contents = str_replace('%%NODE_VERSION%%', '22', $contents);
         $contents = str_replace('%%PACKAGE_MANAGER%%', 'yarn', $contents);
         $contents = str_replace('%%REMOTE_PHP%%', $config['php_binary'] ?? '/usr/local/bin/ea-php84', $contents);
         $contents = str_replace('%%RELEASES_KEEP%%', (string) ($config['releases']['keep'] ?? 5), $contents);
+
+        // FTP server-dir (W9)
+        $ftpRootPath = $config['ftp']['root_path'] ?? '';
+        $contents = str_replace('%%FTP_SERVER_DIR%%', $this->resolveFtpServerDir($ftpRootPath), $contents);
+
+        // Build env (W7)
+        $contents = str_replace("%%BUILD_ENV%%", $this->generateBuildEnvBlock($deployConfig['build_env']), $contents);
+
+        // Env mapping env block + sed block (W2)
+        $contents = str_replace(
+            "%%ENV_MAPPING_ENV_BLOCK%%",
+            $this->generateEnvMappingEnvBlock($deployConfig['env_mapping'], $envManager),
+            $contents
+        );
+        $contents = str_replace(
+            "%%ENV_MAPPING_SED_BLOCK%%",
+            $this->generateEnvMappingSedBlock($deployConfig['env_mapping'], $deployConfig['env_static'], $envManager),
+            $contents
+        );
+
+        // Seeders (W4)
+        $seeders = $config['seeders'] ?? [];
+        $contents = str_replace("%%SEEDERS%%", $this->generateSeedersBlock($seeders), $contents);
+
+        // Custom commands (W6)
+        $contents = str_replace(
+            "%%CUSTOM_COMMANDS%%",
+            $this->generateCustomCommandsBlock($deployConfig['custom_commands']),
+            $contents
+        );
+
+        // Notifications (W8)
+        $contents = str_replace(
+            "%%NOTIFICATIONS%%",
+            $this->generateNotificationsBlock($deployConfig['notifications']),
+            $contents
+        );
 
         // Remove the placeholder instruction comment — no longer needed
         $contents = preg_replace('/^#\s*1\.\s*Replace all.*\n/m', '', $contents);
@@ -146,6 +304,114 @@ class InstallCommand extends Command
         }
 
         return '8.4';
+    }
+
+    protected function resolveFtpServerDir(string $ftpRootPath): string
+    {
+        if ($ftpRootPath === '') {
+            return '${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}/';
+        }
+
+        return 'releases/${{ steps.release.outputs.dir }}/';
+    }
+
+    protected function generateBuildEnvBlock(array $buildEnv): string
+    {
+        if (empty($buildEnv)) {
+            return '';
+        }
+
+        $lines = ['        env:'];
+        foreach ($buildEnv as $key => $value) {
+            $lines[] = "          {$key}: \"{$value}\"";
+        }
+
+        return implode("\n", $lines)."\n";
+    }
+
+    protected function generateEnvMappingEnvBlock(array $envMapping, EnvManager $envManager): string
+    {
+        if (empty($envMapping)) {
+            return '';
+        }
+
+        $block = $envManager->generateWorkflowEnvBlock($envMapping, '          ');
+
+        return $block."\n";
+    }
+
+    protected function generateEnvMappingSedBlock(array $envMapping, array $envStatic, EnvManager $envManager): string
+    {
+        if (empty($envMapping) && empty($envStatic)) {
+            return '';
+        }
+
+        $block = $envManager->generateWorkflowSedBlock($envMapping, $envStatic, '            ');
+
+        return $block."\n";
+    }
+
+    protected function generateSeedersBlock(array $seeders): string
+    {
+        if (empty($seeders)) {
+            return '';
+        }
+
+        $lines = [];
+        foreach ($seeders as $seeder) {
+            $lines[] = "              \${{ env.REMOTE_PHP }} artisan db:seed --class={$seeder} --force";
+        }
+
+        return implode("\n", $lines)."\n";
+    }
+
+    protected function generateCustomCommandsBlock(array $customCommands): string
+    {
+        if (empty($customCommands)) {
+            return '';
+        }
+
+        $lines = [];
+        foreach ($customCommands as $command) {
+            $lines[] = "            \${{ env.REMOTE_PHP }} artisan {$command}";
+        }
+
+        return implode("\n", $lines)."\n";
+    }
+
+    protected function generateNotificationsBlock(array $notifications): string
+    {
+        $webhookSecret = $notifications['slack_webhook_secret'] ?? '';
+
+        if ($webhookSecret === '') {
+            return '';
+        }
+
+        return <<<YAML
+      # ── Notifications ─────────────────────────────────────────────────────
+      - name: Notify Slack on success
+        if: success()
+        env:
+          SLACK_WEBHOOK: \${{ secrets.{$webhookSecret} }}
+        run: |
+          if [ -n "\$SLACK_WEBHOOK" ]; then
+            curl -s -X POST -H 'Content-type: application/json' \\
+              --data '{"text":":white_check_mark: Deploy \${{ github.event.inputs.environment }} succeeded — release \${{ steps.release.outputs.dir }}"}' \\
+              "\$SLACK_WEBHOOK"
+          fi
+
+      - name: Notify Slack on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK: \${{ secrets.{$webhookSecret} }}
+        run: |
+          if [ -n "\$SLACK_WEBHOOK" ]; then
+            curl -s -X POST -H 'Content-type: application/json' \\
+              --data '{"text":":x: Deploy \${{ github.event.inputs.environment }} failed — \${{ github.server_url }}/\${{ github.repository }}/actions/runs/\${{ github.run_id }}"}' \\
+              "\$SLACK_WEBHOOK"
+          fi
+
+YAML;
     }
 
     protected function showRequiredSecrets(string $strategy): void

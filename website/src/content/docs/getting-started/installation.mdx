@@ -27,7 +27,7 @@ The service provider is auto-discovered by Laravel.
     ```bash
     php artisan netsons:install
     ```
-    The wizard will ask you to choose a strategy and guide you through setup.
+    The wizard will ask you to choose a strategy, optionally configure environment variables, and guide you through setup.
   </TabItem>
   <TabItem label="Non-interactive">
     ```bash
@@ -41,8 +41,30 @@ The service provider is auto-discovered by Laravel.
 The installer will:
 1. Publish `config/netsons-deploy.php`
 2. Set the strategy in the config file
-3. Generate `.github/workflows/deploy.yml` with placeholders replaced
-4. Display required GitHub Secrets and Variables
+3. Optionally configure environment variables, build vars, custom commands, and Slack notifications (interactive mode)
+4. Generate `.github/workflows/deploy.yml` with all placeholders replaced
+5. Display required GitHub Secrets and Variables
+
+## Configure environment variables
+
+Add custom `.env` variables for your deployment:
+
+```bash
+php artisan netsons:env add
+```
+
+Variable types:
+- **Secret-backed** — values from GitHub Secrets (e.g., `DB_PASSWORD`)
+- **Static** — fixed values (e.g., `SESSION_DRIVER=database`)
+- **Build** — available during asset build (e.g., `VITE_APP_NAME`)
+
+After adding variables, regenerate the workflow:
+
+```bash
+php artisan netsons:install --force
+```
+
+See [Artisan Commands](/laravel-netsons-deploy/reference/artisan-commands/#netsonsenv) for full details.
 
 ## Verify your setup
 
@@ -50,14 +72,14 @@ The installer will:
 php artisan netsons:check
 ```
 
-This shows your local configuration, checks that the workflow file exists, and lists required GitHub Secrets/Variables. Credentials (SSH, FTP, Git) are configured via GitHub Secrets — the check command does not validate them locally.
+This shows your local configuration, checks that the workflow file exists, displays `netsons-deploy.json` status, and lists required GitHub Secrets/Variables. Credentials (SSH, FTP, Git) are configured via GitHub Secrets — the check command does not validate them locally.
 
 ## Re-running the installer
 
 If you need to change strategies or re-publish the config:
 
 ```bash
-# Overwrite existing config
+# Overwrite existing config and workflow
 php artisan netsons:install --strategy=git --force
 
 # Interactive — will ask before overwriting

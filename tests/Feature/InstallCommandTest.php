@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\File;
 beforeEach(function () {
     $this->configPath = config_path('netsons-deploy.php');
     $this->workflowPath = base_path('.github/workflows/deploy.yml');
+    $this->jsonPath = base_path('netsons-deploy.json');
 
     // Clean up if exists
     if (File::exists($this->configPath)) {
@@ -14,6 +15,9 @@ beforeEach(function () {
     }
     if (File::exists($this->workflowPath)) {
         File::delete($this->workflowPath);
+    }
+    if (File::exists($this->jsonPath)) {
+        File::delete($this->jsonPath);
     }
 });
 
@@ -23,6 +27,9 @@ afterEach(function () {
     }
     if (File::exists($this->workflowPath)) {
         File::delete($this->workflowPath);
+    }
+    if (File::exists($this->jsonPath)) {
+        File::delete($this->jsonPath);
     }
     // Clean up empty dirs
     @rmdir(base_path('.github/workflows'));
@@ -187,5 +194,169 @@ describe('netsons:install', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
             ->expectsOutputToContain('.github/workflows/deploy.yml')
             ->assertSuccessful();
+    });
+});
+
+describe('netsons:install workflow features', function () {
+    // W1: Dependency caching
+    it('includes Composer cache steps in generated workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Get Composer cache directory');
+        expect($contents)->toContain('Cache Composer dependencies');
+        expect($contents)->toContain('actions/cache@v4');
+        expect($contents)->toContain("hashFiles('**/composer.lock')");
+    });
+
+    it('includes Node cache in setup-node step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('cache: ${{ env.PACKAGE_MANAGER }}');
+    });
+
+    // W3: key:generate on first deploy
+    it('includes key:generate step for first deploy', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Generate app key on first deploy');
+        expect($contents)->toContain('artisan key:generate --force');
+        expect($contents)->toContain('.first_deploy');
+    });
+
+    // W4: Seeders + .first_deploy cleanup
+    it('includes first-deploy seeders step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Run seeders on first deploy');
+        expect($contents)->toContain('rm ~/${{ vars.DEPLOY_PATH }}/.first_deploy');
+    });
+
+    // W5: SSH cleanup
+    it('includes SSH cleanup step with if always', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Cleanup SSH');
+        expect($contents)->toContain('if: always()');
+        expect($contents)->toContain('rm -f $HOME/.ssh/deploy_key');
+        expect($contents)->toContain('SSH_AGENT_PID');
+    });
+
+    // W6: package:discover always present
+    it('includes package:discover in cache rebuild', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('artisan package:discover --ansi');
+    });
+
+    // W2: env_mapping from netsons-deploy.json
+    it('includes env_mapping sed commands when netsons-deploy.json has mappings', function () {
+        File::put($this->jsonPath, json_encode([
+            'env_mapping' => ['DB_PASSWORD' => 'DB_PASSWORD'],
+            'env_static' => ['SESSION_DRIVER' => 'database'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('secrets.DB_PASSWORD');
+        expect($contents)->toContain('SESSION_DRIVER');
+        expect($contents)->toContain('database');
+    });
+
+    it('generates clean workflow without env mappings when json is empty', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('%%ENV_MAPPING');
+        expect($contents)->toContain('Update .env values');
+    });
+
+    // W7: Build env vars
+    it('includes build env vars when netsons-deploy.json has build_env', function () {
+        File::put($this->jsonPath, json_encode([
+            'build_env' => ['VITE_APP_NAME' => 'My App'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('VITE_APP_NAME: "My App"');
+    });
+
+    it('generates build step without env block when no build_env configured', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Build assets');
+        expect($contents)->not->toContain('VITE_');
+    });
+
+    // W6: Custom commands
+    it('includes custom commands when netsons-deploy.json has them', function () {
+        File::put($this->jsonPath, json_encode([
+            'custom_commands' => ['event-sourcing:cache-event-handlers 2>/dev/null || true'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('event-sourcing:cache-event-handlers');
+    });
+
+    // W8: Slack notifications
+    it('includes Slack notification steps when configured', function () {
+        File::put($this->jsonPath, json_encode([
+            'notifications' => ['slack_webhook_secret' => 'SLACK_WEBHOOK_DEBUG'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Notify Slack on success');
+        expect($contents)->toContain('Notify Slack on failure');
+        expect($contents)->toContain('secrets.SLACK_WEBHOOK_DEBUG');
+    });
+
+    it('does not include Slack steps when not configured', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('Notify Slack');
+    });
+
+    // W9: FTP server-dir
+    it('uses deploy path in FTP server-dir by default', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('server-dir: ${{ vars.DEPLOY_PATH }}/releases/');
+    });
+
+    // Interactive env setup: skipped in non-interactive mode
+    it('does not create netsons-deploy.json in non-interactive mode', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        expect(File::exists($this->jsonPath))->toBeFalse();
     });
 });

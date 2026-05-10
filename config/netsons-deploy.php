@@ -26,6 +26,7 @@ return [
         'user' => env('NETSONS_FTP_USER'),
         'password' => env('NETSONS_FTP_PASS'),
         'protocol' => env('NETSONS_FTP_PROTOCOL', 'ftp'),
+        'root_path' => env('NETSONS_FTP_ROOT_PATH', ''),
     ],
 
     // Git settings (only for git strategy)
