@@ -220,8 +220,15 @@ class InstallCommand extends Command
                 hint: 'Space to toggle, Enter to confirm',
             );
 
+            // Let the user edit values for selected items
             foreach ($selected as $key) {
-                $manager->addEnvStatic($key, $detected['static'][$key]);
+                $currentValue = $detected['static'][$key];
+                $value = text(
+                    label: "{$key}",
+                    default: $currentValue,
+                    hint: 'Edit value or press Enter to keep',
+                );
+                $manager->addEnvStatic($key, $value);
             }
 
             if (! empty($selected)) {

@@ -624,8 +624,9 @@ During auto-detection in `netsons:install`, `VITE_*` keys should be excluded fro
 ## B11: Allow editing static values during auto-detect
 
 **Priority:** UX fix
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 
