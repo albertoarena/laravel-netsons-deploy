@@ -122,6 +122,9 @@ class InstallCommand extends Command
             if (! confirm('netsons-deploy.json already exists. Reconfigure?', false)) {
                 return;
             }
+
+            // Reset to defaults — reconfigure means start fresh
+            $manager->write($manager::defaults());
         }
 
         note('Environment variable setup');
@@ -191,7 +194,7 @@ class InstallCommand extends Command
                 label: 'Select secret-backed .env variables (from GitHub Secrets)',
                 options: $options,
                 default: array_keys($options),
-                hint: 'These will be injected from GitHub Secrets during deploy',
+                hint: 'Space to toggle, Enter to confirm',
             );
 
             foreach ($selected as $key) {
@@ -214,7 +217,7 @@ class InstallCommand extends Command
                 label: 'Select static .env variables (fixed values)',
                 options: $options,
                 default: array_keys($options),
-                hint: 'These values will be set directly in the workflow',
+                hint: 'Space to toggle, Enter to confirm',
             );
 
             foreach ($selected as $key) {

@@ -19,6 +19,11 @@ class DeployConfigManager
         private readonly string $jsonPath,
     ) {}
 
+    public static function defaults(): array
+    {
+        return self::DEFAULTS;
+    }
+
     public function exists(): bool
     {
         return file_exists($this->jsonPath);
@@ -66,8 +71,15 @@ class DeployConfigManager
             'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY',
         ];
 
-        // Keys already handled by the workflow (APP_ENV, APP_DEBUG, APP_URL) or internal
-        $excludePrefixes = ['APP_', 'LOG_', 'BROADCAST_', 'FILESYSTEM_', 'QUEUE_', 'CACHE_'];
+        // Keys already handled by the workflow, as secrets, or internal
+        $excludePrefixes = [
+            'APP_', 'DB_', 'MAIL_', 'REDIS_', 'AWS_',
+            'LOG_', 'BROADCAST_', 'FILESYSTEM_', 'QUEUE_', 'CACHE_',
+            'VITE_',
+        ];
+
+        // Values that indicate "not configured" — skip for static suggestions
+        $placeholderValues = ['', 'null', 'true', 'false', '127.0.0.1', 'localhost'];
 
         $lines = file($envExamplePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 
@@ -86,6 +98,13 @@ class DeployConfigManager
             $key = trim($key);
             $value = trim($value);
 
+            // Check if it's a known secret key (before prefix exclusion)
+            if (in_array($key, $secretPatterns, true)) {
+                $secretKeys[] = $key;
+
+                continue;
+            }
+
             // Skip excluded prefixes
             $excluded = false;
             foreach ($excludePrefixes as $prefix) {
@@ -98,17 +117,18 @@ class DeployConfigManager
                 continue;
             }
 
-            // Check if it's a known secret key
-            if (in_array($key, $secretPatterns, true)) {
-                $secretKeys[] = $key;
-
+            // Skip placeholder values
+            if (in_array(strtolower($value), $placeholderValues, true)) {
                 continue;
             }
 
-            // Detect static values worth suggesting
-            if ($key === 'SESSION_DRIVER' && $value !== 'file' && $value !== '') {
-                $staticKeys[$key] = $value;
+            // Skip numeric-only values (ports, timeouts)
+            if (ctype_digit($value)) {
+                continue;
             }
+
+            // Detect as static candidate
+            $staticKeys[$key] = $value;
         }
 
         return ['secret' => $secretKeys, 'static' => $staticKeys];

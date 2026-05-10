@@ -402,7 +402,7 @@ describe('parseEnvExample', function () {
         expect($result['static'])->toBe(['SESSION_DRIVER' => 'database']);
     });
 
-    it('skips SESSION_DRIVER when set to default file', function () {
+    it('detects SESSION_DRIVER even with default value', function () {
         $envFile = $this->tempDir.'/.env.example';
         file_put_contents($envFile, implode("\n", [
             'SESSION_DRIVER=file',
@@ -410,7 +410,7 @@ describe('parseEnvExample', function () {
 
         $result = DeployConfigManager::parseEnvExample($envFile);
 
-        expect($result['static'])->not->toHaveKey('SESSION_DRIVER');
+        expect($result['static'])->toBe(['SESSION_DRIVER' => 'file']);
     });
 
     it('excludes APP_* variables', function () {
@@ -441,6 +441,82 @@ describe('parseEnvExample', function () {
         $result = DeployConfigManager::parseEnvExample($envFile);
 
         expect($result['secret'])->toBe(['DB_PASSWORD']);
+    });
+
+    it('detects project-specific static variables', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'LARAVEL_PDF_DRIVER=dompdf',
+            'SCOUT_DRIVER=meilisearch',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([
+            'LARAVEL_PDF_DRIVER' => 'dompdf',
+            'SCOUT_DRIVER' => 'meilisearch',
+        ]);
+    });
+
+    it('skips empty and null values for static detection', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'SOME_KEY=',
+            'ANOTHER_KEY=null',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([]);
+    });
+
+    it('skips boolean values for static detection', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'TELESCOPE_ENABLED=false',
+            'DEBUGBAR_ENABLED=true',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([]);
+    });
+
+    it('skips localhost and numeric values for static detection', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'SOME_HOST=127.0.0.1',
+            'ANOTHER_HOST=localhost',
+            'SOME_PORT=3306',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([]);
+    });
+
+    it('excludes VITE_* from static detection', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'VITE_APP_NAME=MyApp',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([]);
+    });
+
+    it('excludes DB_* MAIL_* REDIS_* prefixes from static detection', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'DB_CONNECTION=mysql',
+            'MAIL_MAILER=smtp',
+            'REDIS_HOST=127.0.0.1',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([]);
     });
 
     it('detects AWS keys as secret-backed', function () {

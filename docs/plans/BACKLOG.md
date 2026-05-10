@@ -441,8 +441,9 @@ This downloads the remote `.env`, validates it locally (Node is already installe
 ## B7: Improve multiselect UX with usage hint
 
 **Priority:** UX fix
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 
@@ -474,8 +475,9 @@ multiselect(
 ## B8: Skip duplicate check during reconfiguration in netsons:install
 
 **Priority:** UX fix
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 
@@ -510,8 +512,9 @@ Pass a flag to the collect methods indicating "reconfigure mode" — in this mod
 ## B9: Auto-detect static env variables from .env.example
 
 **Priority:** Enhancement
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 
