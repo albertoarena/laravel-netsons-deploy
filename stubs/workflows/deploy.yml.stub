@@ -131,9 +131,9 @@ jobs:
       # ── Create release directory on server ──────────────────────────────
       - name: Create release directory
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
@@ -169,9 +169,9 @@ jobs:
       - name: Deploy via Git
         if: env.STRATEGY == 'git'
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           GIT_REPO: ${{ vars.GIT_REPO }}
           GIT_BRANCH: ${{ vars.GIT_BRANCH || 'main' }}
@@ -195,9 +195,9 @@ jobs:
       # ── Shared resources (symlinks) ─────────────────────────────────────
       - name: Setup shared resources
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
@@ -228,9 +228,9 @@ jobs:
       # ── Generate app key on first deploy ────────────────────────────────
       - name: Generate app key on first deploy
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           FIRST_DEPLOY=$(ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
@@ -246,9 +246,9 @@ jobs:
       # ── Update .env values ──────────────────────────────────────────────
       - name: Update .env values
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           APP_ENV: ${{ vars.APP_ENV }}
           APP_DEBUG: ${{ vars.APP_DEBUG }}
@@ -265,9 +265,9 @@ jobs:
 %%ENVAUDIT%%      # ── .htaccess (root) ────────────────────────────────────────────────
       - name: Upload root .htaccess
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
@@ -283,9 +283,9 @@ jobs:
       # ── Migrations ──────────────────────────────────────────────────────
       - name: Run migrations
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
@@ -297,9 +297,9 @@ jobs:
       # ── First-deploy seeders ────────────────────────────────────────────
       - name: Run seeders on first deploy
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
@@ -313,9 +313,9 @@ jobs:
       # ── Cache management ────────────────────────────────────────────────
       - name: Rebuild caches
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
@@ -333,9 +333,9 @@ jobs:
       # ── Switch release ──────────────────────────────────────────────────
       - name: Activate release
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
@@ -366,9 +366,9 @@ jobs:
       # ── Cleanup old releases ────────────────────────────────────────────
       - name: Cleanup old releases
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           RELEASES_KEEP: '%%RELEASES_KEEP%%' # e.g. 5
         run: |

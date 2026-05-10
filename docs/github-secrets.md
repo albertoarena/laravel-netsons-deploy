@@ -10,6 +10,8 @@ Secrets are encrypted and not visible after creation.
 
 | Secret | Description | Example |
 |---|---|---|
+| `SSH_HOST` | SSH hostname | `your-server.netsons.com` |
+| `SSH_USER` | SSH username | `your-cpanel-user` |
 | `SSH_PRIVATE_KEY` | Full SSH private key content | `-----BEGIN OPENSSH PRIVATE KEY-----...` |
 | `SSH_KNOWN_HOSTS` | Known hosts entry for the server | Output of `ssh-keyscan -p 65100 host` |
 
@@ -17,6 +19,7 @@ Secrets are encrypted and not visible after creation.
 
 | Secret | Description | Example |
 |---|---|---|
+| `SSH_PORT` | SSH port (default: 65100) | `65100` |
 | `SSH_KEY_PASSPHRASE` | SSH key passphrase, if set | `my-passphrase` |
 
 ### Required (FTP Strategy Only)
@@ -56,18 +59,10 @@ Variables are visible in plain text. Do not store sensitive data here.
 
 | Variable | Description | Example |
 |---|---|---|
-| `SSH_HOST` | SSH hostname | `your-server.netsons.com` |
-| `SSH_USER` | SSH username | `your-cpanel-user` |
 | `DEPLOY_PATH` | Deploy path relative to home | `public_html` |
 | `APP_ENV` | Application environment | `production` |
 | `APP_DEBUG` | Debug mode | `false` |
 | `APP_URL` | Application URL | `https://your-domain.com` |
-
-### Optional (Both Strategies)
-
-| Variable | Description | Default |
-|---|---|---|
-| `SSH_PORT` | SSH port | `65100` |
 
 ### Required (Git Strategy Only)
 

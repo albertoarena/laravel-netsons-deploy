@@ -758,3 +758,35 @@ For `action.yml`, the passphrase comes from `${{ inputs.ssh-key-passphrase }}` a
 | `stubs/workflows/deploy.yml.stub` | Fix SSH passphrase handling with askpass script |
 | `action.yml` | Fix SSH passphrase handling with askpass script |
 | `tests/Feature/InstallCommandTest.php` | Test SSH setup contains askpass pattern |
+
+---
+
+## B14: Move SSH_HOST, SSH_USER, SSH_PORT from vars to secrets
+
+**Priority:** Bug fix (blocks deploys when SSH values stored as secrets)
+**Status:** DONE
+**Date added:** 2026-05-10
+**Date completed:** 2026-05-10
+
+### Problem
+
+The workflow stub references `SSH_HOST`, `SSH_USER`, `SSH_PORT` via `${{ vars.* }}`. But users commonly store these as **secrets** — `SSH_USER` in particular should not be exposed as plaintext. When stored as secrets, `${{ vars.SSH_HOST }}` returns empty and the deploy fails.
+
+### Fix
+
+Change all `vars.SSH_HOST`, `vars.SSH_USER`, `vars.SSH_PORT` references to `secrets.*` in the workflow stub. The action.yml uses inputs so it's unaffected.
+
+**Secrets:** SSH_HOST, SSH_PORT, SSH_USER, SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS, SSH_KEY_PASSPHRASE, FTP_HOST, FTP_PORT, FTP_USER, FTP_PASS
+
+**Vars:** DEPLOY_PATH, APP_ENV, APP_DEBUG, APP_URL, GIT_REPO, GIT_BRANCH
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Replace `vars.SSH_HOST/USER/PORT` with `secrets.*` in all steps |
+| `src/Strategies/FtpStrategy.php` | Move SSH_HOST, SSH_USER to requiredSecrets(), add SSH_KEY_PASSPHRASE |
+| `src/Strategies/GitStrategy.php` | Move SSH_HOST, SSH_USER to requiredSecrets(), add SSH_KEY_PASSPHRASE |
+| `docs/github-secrets.md` | Move SSH_HOST, SSH_USER, SSH_PORT to secrets table |
+| `website/src/content/docs/getting-started/github-secrets.mdx` | Mirror changes |
+| `tests/Feature/InstallCommandTest.php` | Test generated workflow uses secrets.SSH_HOST |

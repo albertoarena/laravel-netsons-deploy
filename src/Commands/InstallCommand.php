@@ -539,9 +539,9 @@ YAML;
       # ── Envaudit ────────────────────────────────────────────────────────
       - name: Validate .env with envaudit
         env:
-          SSH_HOST: ${{ vars.SSH_HOST }}
-          SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
-          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
           scp -P ${SSH_PORT} \
@@ -588,8 +588,11 @@ YAML;
     protected function getSecretDescription(string $secret): string
     {
         return match ($secret) {
+            'SSH_HOST' => 'SSH hostname',
+            'SSH_USER' => 'SSH username',
             'SSH_PRIVATE_KEY' => 'SSH private key for server access',
             'SSH_KNOWN_HOSTS' => 'SSH known hosts entry for the server',
+            'SSH_KEY_PASSPHRASE' => 'SSH key passphrase (if set)',
             'FTP_HOST' => 'FTP server hostname',
             'FTP_USER' => 'FTP username',
             'FTP_PASS' => 'FTP password',

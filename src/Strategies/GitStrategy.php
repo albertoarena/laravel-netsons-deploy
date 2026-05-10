@@ -25,8 +25,11 @@ class GitStrategy implements DeployStrategyInterface
     public function requiredSecrets(): array
     {
         return [
+            'SSH_HOST',
+            'SSH_USER',
             'SSH_PRIVATE_KEY',
             'SSH_KNOWN_HOSTS',
+            'SSH_KEY_PASSPHRASE',
         ];
     }
 

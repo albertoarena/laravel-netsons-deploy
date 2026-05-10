@@ -198,6 +198,20 @@ describe('netsons:install', function () {
 });
 
 describe('netsons:install workflow features', function () {
+    // B14: SSH values as secrets not vars
+    it('uses secrets for SSH_HOST SSH_USER SSH_PORT in generated workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('secrets.SSH_HOST');
+        expect($contents)->toContain('secrets.SSH_USER');
+        expect($contents)->toContain('secrets.SSH_PORT');
+        expect($contents)->not->toContain('vars.SSH_HOST');
+        expect($contents)->not->toContain('vars.SSH_USER');
+        expect($contents)->not->toContain('vars.SSH_PORT');
+    });
+
     // B13: SSH askpass fix
     it('uses askpass script for SSH passphrase handling', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
