@@ -504,3 +504,78 @@ Pass a flag to the collect methods indicating "reconfigure mode" — in this mod
 | File | Changes |
 |------|---------|
 | `src/Commands/InstallCommand.php` | Reset JSON data at start of `collectDeployJson()` when reconfiguring |
+
+---
+
+## B9: Auto-detect static env variables from .env.example
+
+**Priority:** Enhancement
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+`parseEnvExample()` currently only detects `SESSION_DRIVER` as a static variable. Project-specific keys like `LARAVEL_PDF_DRIVER=dompdf` are invisible to auto-detection. Users must add them manually via "Add more .env variables manually?", which is easy to miss.
+
+### Proposal
+
+Expand static detection to find **any** `.env.example` key that has a non-empty, non-placeholder value, excluding keys that are already handled as secrets or infrastructure.
+
+### Exclusion list
+
+Keys to **exclude** from static suggestions (already handled elsewhere or structural):
+
+| Prefix/key | Reason |
+|---|---|
+| `APP_*` | Already set by workflow (APP_ENV, APP_DEBUG, APP_URL) |
+| `DB_*` | Handled as secret-backed variables |
+| `MAIL_*` | Handled as secret-backed variables |
+| `REDIS_*` | Handled as secret-backed variables |
+| `AWS_*` | Handled as secret-backed variables |
+| `LOG_*`, `BROADCAST_*`, `FILESYSTEM_*`, `QUEUE_*`, `CACHE_*` | Infrastructure defaults, rarely need overriding |
+| `VITE_*` | Handled separately as build env variables |
+
+### Placeholder values to skip
+
+Values that indicate "not configured" and shouldn't be suggested:
+
+- Empty string (`""`)
+- `null`
+- `true` / `false` (boolean flags, usually correct as-is)
+- `127.0.0.1`, `localhost` (development defaults)
+- Numeric-only values like `3306`, `6379` (port defaults)
+
+### Example
+
+Given `.env.example`:
+```
+SESSION_DRIVER=database
+LARAVEL_PDF_DRIVER=dompdf
+SCOUT_DRIVER=meilisearch
+TELESCOPE_ENABLED=false
+DB_PORT=3306
+```
+
+Auto-detected static suggestions:
+```
+Select static .env variables (fixed values):
+  [x] SESSION_DRIVER = database
+  [x] LARAVEL_PDF_DRIVER = dompdf
+  [x] SCOUT_DRIVER = meilisearch
+```
+
+Skipped: `TELESCOPE_ENABLED` (boolean), `DB_PORT` (excluded prefix).
+
+### Implementation
+
+Update `DeployConfigManager::parseEnvExample()` to:
+1. After processing secret-backed keys, iterate remaining keys
+2. Skip excluded prefixes and placeholder values
+3. Add qualifying keys to `static` result array
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Services/DeployConfigManager.php` | Expand static detection in `parseEnvExample()` |
+| `tests/Unit/DeployConfigManagerTest.php` | Add tests for new static detection |
