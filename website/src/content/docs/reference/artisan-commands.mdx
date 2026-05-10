@@ -133,13 +133,15 @@ Interactive prompts guide you through:
 2. **Variable name** — The `.env` key (e.g., `DB_PASSWORD`)
 3. **Value or secret name** — Depending on the type
 
-### Remove a variable
+If the variable already exists, you'll be asked whether to update it.
+
+### Remove an item
 
 ```bash
 php artisan netsons:env remove
 ```
 
-Shows a list of all configured variables and lets you pick which to remove.
+Shows a list of all configured items — env variables (secret-backed, static, build), custom commands, and Slack notifications — and lets you pick which to remove. Select **Cancel** to abort.
 
 ### After changes
 

@@ -139,6 +139,10 @@ Always run these checks before committing:
 
 1. **Tests:** `composer test` (all tests must pass)
 2. **Code style:** `composer lint` (Laravel Pint must pass)
+3. **Docs sync:** if the change affects commands, config, features, or user-facing behavior, update **all three doc locations**:
+   - `README.md`
+   - `docs/` (markdown files)
+   - `website/src/content/docs/` (MDX pages)
 
 If Pint reports issues, fix them with `composer lint:fix` and include the fixes in the commit.
 
