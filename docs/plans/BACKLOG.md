@@ -229,3 +229,52 @@ Add [Laravel Pint](https://laravel.com/docs/13.x/pint) as the code style fixer f
 - Run `pint` once to normalize the entire codebase, commit as a standalone formatting commit
 - After the initial pass, Pint should be run before each commit to keep style consistent
 - Consider adding a pre-commit hook or CI check to enforce style
+
+---
+
+## B4: Evaluate dropping PHP 8.2 minimum
+
+**Priority:** Low
+**Status:** Deferred until Dec 2026
+**Date added:** 2026-05-10
+
+### Analysis (June 2025 data)
+
+**PHP version usage (Packagist installs, June 2025):**
+
+| Version | Share |
+|---------|-------|
+| PHP 8.4 | 13.7% |
+| PHP 8.3 | 34.0% |
+| PHP 8.2 | 24.8% |
+| PHP 8.1 | 13.4% |
+
+**Laravel PHP requirements:**
+
+| Laravel | Min PHP | Status |
+|---------|---------|--------|
+| 10 | 8.1 | End-of-life |
+| 11 | 8.2 | Security support ended March 2026 |
+| 12 | 8.2 | Current release |
+| 13 | 8.3 | Latest |
+
+**PHP 8.2 lifecycle:**
+- Active support (bug fixes): ended December 2024
+- Security support: ends December 2026
+
+### Conclusion
+
+PHP 8.2 support remains necessary. Laravel 12 (current mainline) requires 8.2 as its minimum, and ~25% of the Packagist ecosystem runs on it. Dropping 8.2 would lock out Laravel 12 users who haven't upgraded PHP yet.
+
+**Revisit after December 2026** when PHP 8.2 security support ends. At that point, raising the floor to PHP 8.3 would be reasonable — it aligns with Laravel 13's minimum and enables use of PHP 8.3 features (typed class constants, `json_validate()`, `#[Override]` attribute, etc.).
+
+### Impact on tooling
+
+- `pint.json` is configured with `"php_version": "8.2"` to prevent Pint from introducing PHP 8.3+ syntax
+- When PHP 8.2 is dropped, update `pint.json` and `composer.json` accordingly
+
+### Sources
+
+- [PHP version stats: June 2025 — Stitcher.io](https://stitcher.io/blog/php-version-stats-june-2025)
+- [PHP Supported Versions — php.net](https://www.php.net/supported-versions.php)
+- [PHP Migration Trends — Zend](https://www.zend.com/blog/php-migration-trends)
