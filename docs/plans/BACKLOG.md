@@ -187,3 +187,44 @@ For `netsons:env add`, offer to update instead:
 ### Dependency
 
 Can be implemented independently of B1 (Laravel Prompts), but B1 would enhance the UX further with `suggest()` for common env names.
+
+---
+
+## B3: Adopt Laravel Pint for code styling
+
+**Priority:** Enhancement
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### What
+
+Add [Laravel Pint](https://laravel.com/docs/13.x/pint) as the code style fixer for the project. Pint is an opinionated PHP code style fixer built on top of PHP-CS-Fixer, configured for Laravel's coding conventions out of the box.
+
+### Changes
+
+1. **Add as dev dependency:**
+   ```bash
+   composer require laravel/pint --dev
+   ```
+
+2. **Add `pint.json`** (project root) for any project-specific overrides. Default Laravel preset should work since the project already follows PSR-12 + Laravel conventions.
+
+3. **Add composer scripts:**
+   ```json
+   "scripts": {
+       "lint": "pint --test",
+       "lint:fix": "pint"
+   }
+   ```
+
+4. **Run Pint** on the entire codebase to fix any existing style issues.
+
+5. **Update CLAUDE.md** — add note that Laravel Pint must be used for code styling and that `composer lint` should pass before committing.
+
+6. **CI integration** — optionally add a Pint check step to the test workflow or a GitHub Actions workflow for style checks.
+
+### Implementation notes
+
+- Run `pint` once to normalize the entire codebase, commit as a standalone formatting commit
+- After the initial pass, Pint should be run before each commit to keep style consistent
+- Consider adding a pre-commit hook or CI check to enforce style
