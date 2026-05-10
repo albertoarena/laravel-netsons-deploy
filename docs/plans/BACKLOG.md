@@ -99,3 +99,89 @@ if (class_exists(\Laravel\Prompts\Prompt::class)) {
 - Tests using `expectsChoice()`, `expectsQuestion()`, `expectsConfirmation()` may need updates — check Pest/Testbench compatibility with Prompts
 - The `suggest()` function could improve `netsons:env add` by suggesting common env variable names (e.g., `DB_PASSWORD`, `DB_DATABASE`, `MAIL_HOST`)
 - `spin()` could wrap the workflow generation step for visual feedback
+
+---
+
+## B2: Improve interactive env setup UX
+
+**Priority:** UX fix
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+The `netsons:install` interactive env setup prompt is confusing:
+
+```
+Add secret-backed .env variables (from GitHub Secrets)? (yes/no) [no]:
+```
+
+Two issues:
+
+1. **No context on what's already handled.** The user sees their GitHub Secrets list (e.g., `FTP_HOST`, `SSH_PRIVATE_KEY`, `DB_DATABASE`) but can't tell which ones are already wired into the workflow by the strategy. Infrastructure secrets (`SSH_*`, `FTP_*`) are built-in — the prompt is only about additional project-specific secrets (DB credentials, API keys, etc.), but nothing says that.
+
+2. **No duplicate detection.** If the user adds a secret that already exists in `netsons-deploy.json` (e.g., runs `netsons:env add` and types `DB_DATABASE` when it's already configured), it silently overwrites. It should warn and skip.
+
+### Changes
+
+#### Show already-handled secrets before prompting
+
+Before asking about additional secrets, display what's already wired in:
+
+```
+  The following secrets are already configured by the FTP strategy:
+  SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS, SSH_KEY_PASSPHRASE, FTP_HOST, FTP_USER, FTP_PASS, FTP_PORT
+
+  Add additional .env variables from GitHub Secrets? (e.g., DB_PASSWORD, DB_USERNAME)
+  (yes/no) [no]:
+```
+
+For git strategy, show: `SSH_PRIVATE_KEY, SSH_KNOWN_HOSTS, SSH_KEY_PASSPHRASE`
+
+This makes it clear that FTP/SSH secrets don't need to be added — only project-specific ones.
+
+#### Suggest common env variable names
+
+When adding secret-backed variables, suggest common names:
+
+```
+  ENV variable name (e.g., DB_PASSWORD):
+```
+
+With Laravel Prompts (B1), this could use `suggest()` with a list like:
+- `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`
+- `MAIL_HOST`, `MAIL_USERNAME`, `MAIL_PASSWORD`
+- `REDIS_HOST`, `REDIS_PASSWORD`
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+
+#### Duplicate detection
+
+In both `netsons:install` and `netsons:env add`, when the user enters a key that already exists:
+
+```
+  ENV variable name: DB_DATABASE
+  "DB_DATABASE" is already configured (secret: DB_DATABASE). Skipping.
+```
+
+For `netsons:env add`, offer to update instead:
+
+```
+  ENV variable name: DB_DATABASE
+  "DB_DATABASE" is already configured (secret: DB_DATABASE). Update it? (yes/no) [no]:
+```
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Commands/InstallCommand.php` | Show strategy secrets before prompt, reword prompt, add duplicate check |
+| `src/Commands/EnvCommand.php` | Add duplicate check with update option |
+| `src/Services/DeployConfigManager.php` | Add `hasEnvMapping(string $key): bool` helper |
+| `src/Strategies/FtpStrategy.php` | Already has `requiredSecrets()` — reuse |
+| `src/Strategies/GitStrategy.php` | Already has `requiredSecrets()` — reuse |
+| `tests/Feature/InstallCommandTest.php` | Test duplicate warning |
+| `tests/Feature/EnvCommandTest.php` | Test duplicate detection and update flow |
+
+### Dependency
+
+Can be implemented independently of B1 (Laravel Prompts), but B1 would enhance the UX further with `suggest()` for common env names.
