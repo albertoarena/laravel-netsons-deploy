@@ -790,3 +790,33 @@ Change all `vars.SSH_HOST`, `vars.SSH_USER`, `vars.SSH_PORT` references to `secr
 | `docs/github-secrets.md` | Move SSH_HOST, SSH_USER, SSH_PORT to secrets table |
 | `website/src/content/docs/getting-started/github-secrets.mdx` | Mirror changes |
 | `tests/Feature/InstallCommandTest.php` | Test generated workflow uses secrets.SSH_HOST |
+
+---
+
+## B15: Export SSH agent env vars to GITHUB_ENV
+
+**Priority:** Bug fix (blocks all SSH-based deploys)
+**Status:** DONE
+**Date added:** 2026-05-10
+**Date completed:** 2026-05-10
+
+### Problem
+
+The SSH setup step starts `ssh-agent` and adds the deploy key, but does not export `SSH_AUTH_SOCK` and `SSH_AGENT_PID` to `$GITHUB_ENV`. Each GitHub Actions step runs in a separate shell, so subsequent steps (create release, deploy, migrations, etc.) cannot find the agent and SSH connections time out.
+
+### Fix
+
+Add two lines at the end of the SSH setup step in both `stubs/workflows/deploy.yml.stub` and `action.yml`:
+
+```bash
+echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
+echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+```
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Add GITHUB_ENV exports after ssh-add |
+| `action.yml` | Add GITHUB_ENV exports after ssh-add |
+| `tests/Feature/InstallCommandTest.php` | Test SSH setup exports agent env vars |

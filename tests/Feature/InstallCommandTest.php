@@ -198,6 +198,17 @@ describe('netsons:install', function () {
 });
 
 describe('netsons:install workflow features', function () {
+    // B15: SSH agent env export
+    it('exports SSH agent env vars to GITHUB_ENV', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('SSH_AUTH_SOCK=$SSH_AUTH_SOCK');
+        expect($contents)->toContain('SSH_AGENT_PID=$SSH_AGENT_PID');
+        expect($contents)->toContain('GITHUB_ENV');
+    });
+
     // B14: SSH values as secrets not vars
     it('uses secrets for SSH_HOST SSH_USER SSH_PORT in generated workflow', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
