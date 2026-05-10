@@ -198,6 +198,18 @@ describe('netsons:install', function () {
 });
 
 describe('netsons:install workflow features', function () {
+    // B13: SSH askpass fix
+    it('uses askpass script for SSH passphrase handling', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('/tmp/askpass.sh');
+        expect($contents)->toContain('SSH_ASKPASS=/tmp/askpass.sh');
+        expect($contents)->toContain('SSH_ASKPASS_REQUIRE=force');
+        expect($contents)->not->toContain('echo "${SSH_KEY_PASSPHRASE}" | SSH_ASKPASS_REQUIRE=force');
+    });
+
     // B12: Prepare Laravel directories
     it('includes prepare Laravel directories step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])

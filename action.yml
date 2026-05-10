@@ -103,7 +103,13 @@ runs:
         chmod 644 ~/.ssh/known_hosts
         eval "$(ssh-agent -s)"
         if [ -n "${{ inputs.ssh-key-passphrase }}" ]; then
-          echo "${{ inputs.ssh-key-passphrase }}" | SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key
+          export SSH_KEY_PASSPHRASE="${{ inputs.ssh-key-passphrase }}"
+          cat > /tmp/askpass.sh << 'SCRIPT'
+        #!/bin/bash
+        echo "$SSH_KEY_PASSPHRASE"
+        SCRIPT
+          chmod +x /tmp/askpass.sh
+          SSH_ASKPASS=/tmp/askpass.sh SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key
         else
           ssh-add ~/.ssh/deploy_key
         fi

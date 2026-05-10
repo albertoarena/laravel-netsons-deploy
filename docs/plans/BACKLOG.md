@@ -708,3 +708,53 @@ Add a step to `stubs/workflows/deploy.yml.stub` between "Checkout code" and "Ins
 |------|---------|
 | `stubs/workflows/deploy.yml.stub` | Add "Prepare Laravel directories" step |
 | `tests/Feature/InstallCommandTest.php` | Test that generated workflow contains the step |
+
+---
+
+## B13: Fix SSH askpass failure when passphrase is provided
+
+**Priority:** Bug fix (blocks deploys with SSH passphrase)
+**Status:** DONE
+**Date added:** 2026-05-10
+**Date completed:** 2026-05-10
+
+### Problem
+
+When `SSH_KEY_PASSPHRASE` is provided, the SSH setup step fails with:
+
+```
+ssh_askpass: exec(/usr/bin/ssh-askpass): No such file or directory
+```
+
+The current code sets `SSH_ASKPASS_REQUIRE=force` but does NOT set `SSH_ASKPASS` to a real script. When forced, ssh-add ignores stdin and looks for `/usr/bin/ssh-askpass`, which doesn't exist on GitHub Actions runners.
+
+### Root cause
+
+```bash
+echo "${SSH_KEY_PASSPHRASE}" | SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key
+```
+
+`SSH_ASKPASS_REQUIRE=force` makes ssh-add use `SSH_ASKPASS` program instead of stdin. Without setting `SSH_ASKPASS`, it falls back to the default path which doesn't exist.
+
+### Fix
+
+Create a temporary askpass helper script that echoes the passphrase, then point `SSH_ASKPASS` to it. Fix in both `stubs/workflows/deploy.yml.stub` and `action.yml`:
+
+```bash
+cat > /tmp/askpass.sh << 'SCRIPT'
+#!/bin/bash
+echo "$SSH_KEY_PASSPHRASE"
+SCRIPT
+chmod +x /tmp/askpass.sh
+SSH_ASKPASS=/tmp/askpass.sh SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/deploy_key
+```
+
+For `action.yml`, the passphrase comes from `${{ inputs.ssh-key-passphrase }}` and must be exported as `SSH_KEY_PASSPHRASE` env var for the askpass script.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Fix SSH passphrase handling with askpass script |
+| `action.yml` | Fix SSH passphrase handling with askpass script |
+| `tests/Feature/InstallCommandTest.php` | Test SSH setup contains askpass pattern |

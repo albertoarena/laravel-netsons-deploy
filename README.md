@@ -14,9 +14,11 @@ Deploy Laravel applications to **Netsons shared hosting** (cPanel, SSD plans) vi
 - Automatic cache clearing and rebuilding (with dependency caching for faster builds)
 - Database migrations on deploy
 - Automatic `key:generate` and seeder support on first deploy
+- Auto-detect env variables from `.env.example` (secret-backed and static, with editable values)
 - Custom `.env` variable management (secret-backed and static values)
 - Build environment variables (e.g., Vite config)
 - Custom post-deploy artisan commands
+- [Envaudit](https://albertoarena.github.io/envaudit/) `.env` validation (opt-in, default enabled)
 - Slack deploy notifications (opt-in)
 - `.htaccess` management for root and public directories
 - Configurable FTP root path for different account setups

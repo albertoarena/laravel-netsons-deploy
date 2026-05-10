@@ -160,6 +160,14 @@ Seeder classes to run on the **first deploy only**. A `.first_deploy` flag file 
 
 The `netsons-deploy.json` file in your project root stores additional deployment configuration that the workflow generator uses. It is created by `netsons:install` and managed by `netsons:env`.
 
+During `netsons:install`, the installer auto-detects variables from your `.env.example`:
+- **Secret-backed** — `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `REDIS_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
+- **Static** — any key with a non-placeholder value, excluding `APP_*`, `DB_*`, `MAIL_*`, `REDIS_*`, `AWS_*`, `VITE_*`, `LOG_*`, `CACHE_*` prefixes and placeholder values (empty, `null`, booleans, localhost, numeric ports)
+
+Static values can be edited after selection (e.g., change `SESSION_DRIVER` from `file` to `database`).
+
+When reconfiguring, the JSON is reset to defaults before collecting new values.
+
 ### Schema
 
 ```json

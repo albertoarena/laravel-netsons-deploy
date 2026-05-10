@@ -4,7 +4,7 @@ The FTP strategy builds your application in the GitHub Actions runner and upload
 
 ## How It Works
 
-1. **Build** — GitHub Actions installs Composer dependencies and builds Node assets (with dependency caching for faster builds)
+1. **Build** — GitHub Actions prepares Laravel directories, installs Composer dependencies, and builds Node assets (with dependency caching for faster builds)
 2. **Prepare** — A new release directory is created on the server via SSH, copying the current release as a base
 3. **Upload** — [SamKirkland/FTP-Deploy-Action](https://github.com/SamKirkland/FTP-Deploy-Action) syncs files incrementally via FTP
 4. **First deploy** — If this is the first deploy, generates `APP_KEY` and runs configured seeders

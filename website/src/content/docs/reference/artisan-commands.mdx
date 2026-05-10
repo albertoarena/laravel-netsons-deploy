@@ -24,8 +24,10 @@ php artisan netsons:install [--strategy=ftp|git] [--force]
 ### What it does
 
 1. Publishes `config/netsons-deploy.php` with the selected strategy
-2. Auto-detects env variables from `.env.example` (secret-backed and static) and presents them with multiselect
-3. Reads `netsons-deploy.json` for env variables, build vars, custom commands, and notifications
+2. Auto-detects env variables from `.env.example`:
+   - **Secret-backed** (DB_DATABASE, DB_PASSWORD, MAIL_*, REDIS_PASSWORD, AWS_*) — presented via multiselect
+   - **Static** (SESSION_DRIVER, LARAVEL_PDF_DRIVER, any project-specific key with a non-placeholder value) — presented via multiselect, then each value can be edited
+3. Prompts for build env vars, custom commands, Slack notifications, and envaudit
 4. Generates `.github/workflows/deploy.yml` with all placeholders replaced
 5. Displays required GitHub Secrets for the chosen strategy
 6. Displays required GitHub Variables
@@ -67,6 +69,8 @@ This overwrites the config file, regenerates the workflow, and updates the strat
 Without `--force`, the installer will:
 - **Interactive mode** — ask before overwriting an existing config
 - **Non-interactive mode** — skip the config overwrite but still generate the workflow if missing
+
+When reconfiguring `netsons-deploy.json`, the file is reset to defaults before collecting new values — this prevents stale entries from a previous configuration.
 
 ---
 
