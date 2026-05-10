@@ -44,6 +44,76 @@ class DeployConfigManager
         );
     }
 
+    /**
+     * Parse .env.example and categorize variables into secret-backed and static suggestions.
+     *
+     * @return array{secret: list<string>, static: array<string, string>}
+     */
+    public static function parseEnvExample(string $envExamplePath): array
+    {
+        if (! file_exists($envExamplePath)) {
+            return ['secret' => [], 'static' => []];
+        }
+
+        $secretKeys = [];
+        $staticKeys = [];
+
+        // Keys that are secret-backed (credentials, passwords, keys)
+        $secretPatterns = [
+            'DB_DATABASE', 'DB_USERNAME', 'DB_PASSWORD',
+            'MAIL_USERNAME', 'MAIL_PASSWORD',
+            'REDIS_PASSWORD',
+            'AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY',
+        ];
+
+        // Keys already handled by the workflow (APP_ENV, APP_DEBUG, APP_URL) or internal
+        $excludePrefixes = ['APP_', 'LOG_', 'BROADCAST_', 'FILESYSTEM_', 'QUEUE_', 'CACHE_'];
+
+        $lines = file($envExamplePath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+
+            if ($line === '' || str_starts_with($line, '#')) {
+                continue;
+            }
+
+            if (! str_contains($line, '=')) {
+                continue;
+            }
+
+            [$key, $value] = explode('=', $line, 2);
+            $key = trim($key);
+            $value = trim($value);
+
+            // Skip excluded prefixes
+            $excluded = false;
+            foreach ($excludePrefixes as $prefix) {
+                if (str_starts_with($key, $prefix)) {
+                    $excluded = true;
+                    break;
+                }
+            }
+            if ($excluded) {
+                continue;
+            }
+
+            // Check if it's a known secret key
+            if (in_array($key, $secretPatterns, true)) {
+                $secretKeys[] = $key;
+
+                continue;
+            }
+
+            // Detect static values worth suggesting
+            if ($key === 'SESSION_DRIVER' && $value !== 'file' && $value !== '') {
+                $staticKeys[$key] = $value;
+            }
+        }
+
+        return ['secret' => $secretKeys, 'static' => $staticKeys];
+    }
+
     public function has(string $section, string $key): bool
     {
         $data = $this->read();

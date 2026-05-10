@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\File;
 
 use function Laravel\Prompts\confirm;
 use function Laravel\Prompts\info;
+use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\note;
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\table;
@@ -130,14 +131,21 @@ class InstallCommand extends Command
         $strategySecrets = $strategyInstance->requiredSecrets();
         note("The following secrets are already handled by the {$strategy} strategy:\n  ".implode(', ', $strategySecrets));
 
-        // Secret-backed env vars
-        if (confirm('Add additional .env variables from GitHub Secrets? (e.g., DB_PASSWORD, DB_USERNAME)', false)) {
-            $this->collectEnvMappings($manager);
-        }
+        // Auto-detect env vars from .env.example
+        $envExamplePath = base_path('.env.example');
+        $detected = DeployConfigManager::parseEnvExample($envExamplePath);
 
-        // Static env vars
-        if (confirm('Add static .env variables (fixed values)?', false)) {
-            $this->collectEnvStatic($manager);
+        if (! empty($detected['secret']) || ! empty($detected['static'])) {
+            $this->collectDetectedEnvVars($manager, $detected);
+        } else {
+            // Fallback to manual entry if no .env.example or no detected vars
+            if (confirm('Add additional .env variables from GitHub Secrets? (e.g., DB_PASSWORD, DB_USERNAME)', false)) {
+                $this->collectEnvMappings($manager);
+            }
+
+            if (confirm('Add static .env variables (fixed values)?', false)) {
+                $this->collectEnvStatic($manager);
+            }
         }
 
         // Build env vars
@@ -168,6 +176,65 @@ class InstallCommand extends Command
         $manager->setEnvaudit($enableEnvaudit);
 
         info('Configuration saved to netsons-deploy.json');
+    }
+
+    protected function collectDetectedEnvVars(DeployConfigManager $manager, array $detected): void
+    {
+        // Secret-backed variables
+        if (! empty($detected['secret'])) {
+            $options = [];
+            foreach ($detected['secret'] as $key) {
+                $options[$key] = $key;
+            }
+
+            $selected = multiselect(
+                label: 'Select secret-backed .env variables (from GitHub Secrets)',
+                options: $options,
+                default: array_keys($options),
+                hint: 'These will be injected from GitHub Secrets during deploy',
+            );
+
+            foreach ($selected as $key) {
+                $manager->addEnvMapping($key, $key);
+            }
+
+            if (! empty($selected)) {
+                info('Added '.count($selected).' secret-backed variable(s).');
+            }
+        }
+
+        // Static variables
+        if (! empty($detected['static'])) {
+            $options = [];
+            foreach ($detected['static'] as $key => $value) {
+                $options[$key] = "{$key} = {$value}";
+            }
+
+            $selected = multiselect(
+                label: 'Select static .env variables (fixed values)',
+                options: $options,
+                default: array_keys($options),
+                hint: 'These values will be set directly in the workflow',
+            );
+
+            foreach ($selected as $key) {
+                $manager->addEnvStatic($key, $detected['static'][$key]);
+            }
+
+            if (! empty($selected)) {
+                info('Added '.count($selected).' static variable(s).');
+            }
+        }
+
+        // Still allow manual additions
+        if (confirm('Add more .env variables manually?', false)) {
+            if (confirm('Add secret-backed variables?', false)) {
+                $this->collectEnvMappings($manager);
+            }
+            if (confirm('Add static variables?', false)) {
+                $this->collectEnvStatic($manager);
+            }
+        }
     }
 
     protected function collectEnvMappings(DeployConfigManager $manager): void

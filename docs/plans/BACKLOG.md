@@ -284,8 +284,9 @@ PHP 8.2 support remains necessary. Laravel 12 (current mainline) requires 8.2 as
 ## B5: Auto-detect common env variables from .env.example
 
 **Priority:** Enhancement
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-10
 
 ### Problem
 

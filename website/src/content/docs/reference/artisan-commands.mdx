@@ -24,11 +24,12 @@ php artisan netsons:install [--strategy=ftp|git] [--force]
 ### What it does
 
 1. Publishes `config/netsons-deploy.php` with the selected strategy
-2. Reads `netsons-deploy.json` for env variables, build vars, custom commands, and notifications
-3. Generates `.github/workflows/deploy.yml` with all placeholders replaced
-4. Displays required GitHub Secrets for the chosen strategy
-5. Displays required GitHub Variables
-6. Shows next steps
+2. Auto-detects env variables from `.env.example` (secret-backed and static) and presents them with multiselect
+3. Reads `netsons-deploy.json` for env variables, build vars, custom commands, and notifications
+4. Generates `.github/workflows/deploy.yml` with all placeholders replaced
+5. Displays required GitHub Secrets for the chosen strategy
+6. Displays required GitHub Variables
+7. Shows next steps
 
 ### Workflow generation
 
@@ -47,6 +48,7 @@ The installer creates `.github/workflows/deploy.yml` from a stub template, repla
 - `%%SEEDERS%%` — first-deploy seeder commands from config
 - `%%CUSTOM_COMMANDS%%` — custom artisan commands from `netsons-deploy.json`
 - `%%NOTIFICATIONS%%` — Slack notification steps from `netsons-deploy.json`
+- `%%ENVAUDIT%%` — envaudit validation step from `netsons-deploy.json`
 
 If `.github/workflows/deploy.yml` already exists, it is preserved unless `--force` is used.
 

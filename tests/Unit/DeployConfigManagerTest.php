@@ -12,10 +12,19 @@ beforeEach(function () {
 });
 
 afterEach(function () {
-    if (file_exists($this->jsonPath)) {
-        unlink($this->jsonPath);
-    }
+    // Clean up all files in temp dir
     if (is_dir($this->tempDir)) {
+        $files = glob($this->tempDir.'/*') ?: [];
+        foreach ($files as $file) {
+            unlink($file);
+        }
+        // Also clean hidden files like .env.example
+        $hidden = glob($this->tempDir.'/.*') ?: [];
+        foreach ($hidden as $file) {
+            if (basename($file) !== '.' && basename($file) !== '..') {
+                unlink($file);
+            }
+        }
         rmdir($this->tempDir);
     }
 });
@@ -329,6 +338,122 @@ describe('has', function () {
 
     it('returns false for unknown section', function () {
         expect($this->manager->has('nonexistent', 'KEY'))->toBeFalse();
+    });
+});
+
+describe('parseEnvExample', function () {
+    it('returns empty arrays when file does not exist', function () {
+        $result = DeployConfigManager::parseEnvExample('/nonexistent/.env.example');
+
+        expect($result['secret'])->toBe([]);
+        expect($result['static'])->toBe([]);
+    });
+
+    it('detects DB variables as secret-backed', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'DB_DATABASE=laravel',
+            'DB_USERNAME=root',
+            'DB_PASSWORD=',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toContain('DB_DATABASE');
+        expect($result['secret'])->toContain('DB_USERNAME');
+        expect($result['secret'])->toContain('DB_PASSWORD');
+    });
+
+    it('detects MAIL credentials as secret-backed', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'MAIL_HOST=mailpit',
+            'MAIL_USERNAME=null',
+            'MAIL_PASSWORD=null',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toContain('MAIL_USERNAME');
+        expect($result['secret'])->toContain('MAIL_PASSWORD');
+    });
+
+    it('detects REDIS_PASSWORD as secret-backed', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'REDIS_HOST=127.0.0.1',
+            'REDIS_PASSWORD=null',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toContain('REDIS_PASSWORD');
+        expect($result['secret'])->not->toContain('REDIS_HOST');
+    });
+
+    it('detects SESSION_DRIVER as static when non-default', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'SESSION_DRIVER=database',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe(['SESSION_DRIVER' => 'database']);
+    });
+
+    it('skips SESSION_DRIVER when set to default file', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'SESSION_DRIVER=file',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->not->toHaveKey('SESSION_DRIVER');
+    });
+
+    it('excludes APP_* variables', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'APP_NAME=Laravel',
+            'APP_ENV=local',
+            'APP_KEY=',
+            'APP_DEBUG=true',
+            'APP_URL=http://localhost',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toBe([]);
+        expect($result['static'])->toBe([]);
+    });
+
+    it('skips comment lines and empty lines', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            '# Database settings',
+            '',
+            'DB_PASSWORD=secret',
+            '# End',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toBe(['DB_PASSWORD']);
+    });
+
+    it('detects AWS keys as secret-backed', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'AWS_ACCESS_KEY_ID=',
+            'AWS_SECRET_ACCESS_KEY=',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toContain('AWS_ACCESS_KEY_ID');
+        expect($result['secret'])->toContain('AWS_SECRET_ACCESS_KEY');
     });
 });
 
