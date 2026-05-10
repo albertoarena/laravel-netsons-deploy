@@ -278,3 +278,158 @@ PHP 8.2 support remains necessary. Laravel 12 (current mainline) requires 8.2 as
 - [PHP version stats: June 2025 — Stitcher.io](https://stitcher.io/blog/php-version-stats-june-2025)
 - [PHP Supported Versions — php.net](https://www.php.net/supported-versions.php)
 - [PHP Migration Trends — Zend](https://www.zend.com/blog/php-migration-trends)
+
+---
+
+## B5: Auto-detect common env variables from .env.example
+
+**Priority:** Enhancement
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### Problem
+
+During `netsons:install`, users must manually type every env variable name (e.g., `DB_DATABASE`, `DB_PASSWORD`). Most Laravel apps need the same common set, and the project's `.env.example` already lists all of them.
+
+### Proposal
+
+During the interactive env setup in `netsons:install`, read `.env.example` and auto-suggest common variables:
+
+**Secret-backed (from GitHub Secrets) — pre-checked:**
+- `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`
+- `DB_HOST`, `DB_PORT` (if non-default values)
+- `MAIL_USERNAME`, `MAIL_PASSWORD` (if present)
+- `REDIS_PASSWORD` (if present)
+
+**Static (fixed values) — detected from .env.example:**
+- `SESSION_DRIVER` (if set to something other than `file`)
+- Other app-specific keys with non-default values
+
+### UX flow
+
+```
+Detected variables in .env.example:
+
+Secret-backed (recommended):
+  [x] DB_DATABASE
+  [x] DB_USERNAME
+  [x] DB_PASSWORD
+  [ ] MAIL_USERNAME
+  [ ] MAIL_PASSWORD
+
+Use multiselect() to let user pick which to include.
+
+Static values:
+  [x] SESSION_DRIVER = database
+  [ ] LARAVEL_PDF_DRIVER = dompdf
+
+Confirm selections? (yes/no) [yes]:
+```
+
+With Laravel Prompts `multiselect()`, users can arrow-key through the list and toggle items on/off instead of typing each name.
+
+### Implementation
+
+1. Read `.env.example` from project root (fallback: skip if not found)
+2. Parse key-value pairs
+3. Categorize known keys into secret-backed vs. static suggestions
+4. Present with `multiselect()` for each category
+5. Write selections to `netsons-deploy.json`
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Commands/InstallCommand.php` | Add `.env.example` parsing, replace manual entry loop with multiselect |
+| `src/Services/DeployConfigManager.php` | No changes needed |
+
+### Dependency
+
+Depends on B1 (Laravel Prompts) for `multiselect()` — already implemented.
+
+---
+
+## B6: Envaudit integration as opt-in default
+
+**Priority:** Enhancement
+**Status:** Planned
+**Date added:** 2026-05-10
+
+### What
+
+Add [envaudit](https://www.npmjs.com/package/@albertoarena/envaudit) as an opt-in (default yes) validation step in the deploy workflow. Envaudit validates the `.env` file after deployment to catch missing or misconfigured variables before the release goes live.
+
+### UX flow
+
+During `netsons:install` interactive setup:
+
+```
+Enable envaudit .env validation after deploy?
+  See: https://albertoarena.github.io/envaudit/getting-started/ci-integration/
+  (yes/no) [yes]:
+```
+
+Defaulting to **yes** means envaudit is included unless the user explicitly skips it. The link lets users evaluate the tool before deciding.
+
+Use the `hint` parameter in Laravel Prompts `confirm()`:
+
+```php
+confirm(
+    label: 'Enable envaudit .env validation after deploy?',
+    default: true,
+    hint: 'See: https://albertoarena.github.io/envaudit/getting-started/ci-integration/',
+);
+```
+
+### Workflow step
+
+Added after "Update .env values" and before "Run migrations":
+
+```yaml
+- name: Validate .env with envaudit
+  env:
+    SSH_HOST: ${{ vars.SSH_HOST }}
+    SSH_PORT: ${{ vars.SSH_PORT || '65100' }}
+    SSH_USER: ${{ vars.SSH_USER }}
+    DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+  run: |
+    scp -P ${SSH_PORT} \
+      ${SSH_USER}@${SSH_HOST}:~/${{ vars.DEPLOY_PATH }}/shared/.env .env
+    npx @albertoarena/envaudit check --ci --no-color
+    rm .env
+```
+
+This downloads the remote `.env`, validates it locally (Node is already installed in the runner), and fails the deploy if critical variables are missing.
+
+### Configuration
+
+**`netsons-deploy.json`:**
+```json
+{
+    "envaudit": true
+}
+```
+
+**`stubs/workflows/deploy.yml.stub`:**
+- Add `%%ENVAUDIT%%` placeholder after "Update .env values"
+- `InstallCommand` replaces it with the validation step or empty string
+
+### Implementation
+
+1. Add `envaudit` key to `DeployConfigManager` defaults
+2. Add prompt to `InstallCommand::collectDeployJson()` — default yes
+3. Add `%%ENVAUDIT%%` placeholder to workflow stub
+4. Add generation logic in `InstallCommand::publishWorkflow()`
+5. Add `netsons:env` support for toggling envaudit on/off
+6. Update docs (configuration.md, website)
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Services/DeployConfigManager.php` | Add `envaudit` to defaults |
+| `src/Commands/InstallCommand.php` | Add envaudit prompt + workflow generation |
+| `src/Commands/EnvCommand.php` | Show envaudit status in list |
+| `stubs/workflows/deploy.yml.stub` | Add `%%ENVAUDIT%%` placeholder |
+| `docs/configuration.md` | Document envaudit config |
+| `website/src/content/docs/reference/configuration.mdx` | Mirror docs |
