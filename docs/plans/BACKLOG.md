@@ -851,6 +851,30 @@ Changed `\${ENV_FILE}` to `\\\${ENV_FILE}` in both the secret-backed and static 
 
 ---
 
+## B18: Fix ESCAPED variable expansion in generated sed commands
+
+**Priority:** Bug fix (secret-backed env values set to empty on deploy)
+**Status:** DONE
+**Date added:** 2026-05-11
+**Date completed:** 2026-05-11
+
+### Problem
+
+Same class of bug as B17. The `ESCAPED` variable is set on the remote server inside the `<<REMOTE` heredoc, but `${ESCAPED}` on the next line is expanded by the **local** shell (GitHub Actions runner) to empty. All secret-backed values (DB_USERNAME, DB_PASSWORD, etc.) end up empty in the remote `.env`.
+
+### Fix
+
+Changed `\${ESCAPED}` to `\\\${ESCAPED}` in `EnvManager::generateWorkflowSedBlock()` so the output contains `\${ESCAPED}` which the local shell passes literally to the remote.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Services/EnvManager.php` | Escape `${ESCAPED}` in generated sed commands |
+| `tests/Unit/EnvManagerTest.php` | Test that ESCAPED is properly escaped |
+
+---
+
 ## B16: Fix heredoc indentation in key:generate step
 
 **Priority:** Bug fix (syntax error in generated workflow)

@@ -180,6 +180,16 @@ describe('generateWorkflowSedBlock', function () {
         expect($result)->toContain('s/[|&\\\\]/\\\\&/g');
     });
 
+    it('escapes ESCAPED variable for heredoc context', function () {
+        $result = $this->manager->generateWorkflowSedBlock(
+            ['DB_USERNAME' => 'DB_USERNAME'],
+            []
+        );
+        // ESCAPED is set on remote side, must be escaped for local shell in <<REMOTE heredoc
+        expect($result)->toContain('\\${ESCAPED}');
+        expect($result)->not->toMatch('/[^\\\\]\$\{ESCAPED\}/');
+    });
+
     it('targets ENV_FILE variable with backslash escape', function () {
         $result = $this->manager->generateWorkflowSedBlock(
             ['KEY' => 'KEY'],

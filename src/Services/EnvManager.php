@@ -82,7 +82,7 @@ class EnvManager
         // Secret-backed variables: escape at runtime
         foreach ($envMapping as $envKey => $secretName) {
             $lines[] = "{$indent}ESCAPED=\$(printf '%s' \"\${{$envKey}}\" | sed 's/[|&\\\\]/\\\\&/g')";
-            $lines[] = "{$indent}sed -i \"s|^{$envKey}=.*|{$envKey}=\${ESCAPED}|\" \\\${ENV_FILE}";
+            $lines[] = "{$indent}sed -i \"s|^{$envKey}=.*|{$envKey}=\\\${ESCAPED}|\" \\\${ENV_FILE}";
         }
 
         // Static variables: values known at generation time
