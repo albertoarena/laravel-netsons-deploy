@@ -139,6 +139,8 @@ Passwords or values containing `&`, `|`, `\`, or `"` are properly escaped during
 
 Check if `mod_rewrite` is enabled. In most Netsons plans it is enabled by default. Verify the `.htaccess` syntax is correct.
 
+If the error occurs after a fresh deploy, ensure the proxy `index.php` is at `public/index.php` (not at the deploy root). The root `.htaccess` rewrites all requests to `public/`, so the proxy must be there. If you generated your workflow before **v1.6.3**, run `netsons:install --force` to regenerate it with the fix.
+
 ### Assets not loading (CSS/JS 404)
 
 Ensure the proxy `index.php` and `.htaccess` are properly set up. The root `.htaccess` should rewrite to `public/`, and assets should be accessible at `public/build/`.
