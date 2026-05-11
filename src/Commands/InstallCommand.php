@@ -118,12 +118,14 @@ class InstallCommand extends Command
         $manager = new DeployConfigManager($jsonPath);
 
         // Skip if JSON already exists and user doesn't want to reconfigure
+        $existingConfig = [];
         if ($manager->exists()) {
             if (! confirm('netsons-deploy.json already exists. Reconfigure?', false)) {
                 return;
             }
 
-            // Reset to defaults — reconfigure means start fresh
+            // Preserve existing values to use as defaults during reconfiguration
+            $existingConfig = $manager->read();
             $manager->write($manager::defaults());
         }
 
@@ -139,7 +141,7 @@ class InstallCommand extends Command
         $detected = DeployConfigManager::parseEnvExample($envExamplePath);
 
         if (! empty($detected['secret']) || ! empty($detected['static']) || ! empty($detected['build'])) {
-            $this->collectDetectedEnvVars($manager, $detected);
+            $this->collectDetectedEnvVars($manager, $detected, $existingConfig);
         } else {
             // Fallback to manual entry if no .env.example or no detected vars
             if (confirm('Add additional .env variables from GitHub Secrets? (e.g., DB_PASSWORD, DB_USERNAME)', false)) {
@@ -156,13 +158,24 @@ class InstallCommand extends Command
             $this->collectBuildEnv($manager);
         }
 
-        // Custom commands
+        // Restore existing custom commands, then offer to modify
+        $existingCommands = $existingConfig['custom_commands'] ?? [];
+        foreach ($existingCommands as $cmd) {
+            $manager->addCustomCommand($cmd);
+        }
+        if (! empty($existingCommands)) {
+            info('Restored '.count($existingCommands).' custom command(s) from previous config.');
+        }
         if (confirm('Add custom post-deploy artisan commands?', false)) {
             $this->collectCustomCommands($manager);
         }
 
-        // Slack notifications
-        if (confirm('Enable Slack deploy notifications?', false)) {
+        // Slack notifications — use existing value as default
+        $existingWebhook = $existingConfig['notifications']['slack_webhook_secret'] ?? '';
+        if ($existingWebhook !== '') {
+            $manager->setSlackWebhook($existingWebhook);
+            info("Restored Slack notification (secret: {$existingWebhook}).");
+        } elseif (confirm('Enable Slack deploy notifications?', false)) {
             $secretName = text(
                 label: 'GitHub Secret name for Slack webhook URL',
                 default: 'SLACK_WEBHOOK_DEBUG',
@@ -170,10 +183,11 @@ class InstallCommand extends Command
             $manager->setSlackWebhook($secretName);
         }
 
-        // Envaudit
+        // Envaudit — use existing value as default
+        $existingEnvaudit = $existingConfig['envaudit'] ?? true;
         $enableEnvaudit = confirm(
             label: 'Enable envaudit .env validation after deploy?',
-            default: true,
+            default: $existingEnvaudit,
             hint: 'See: https://albertoarena.github.io/envaudit/getting-started/ci-integration/',
         );
         $manager->setEnvaudit($enableEnvaudit);
@@ -181,7 +195,7 @@ class InstallCommand extends Command
         info('Configuration saved to netsons-deploy.json');
     }
 
-    protected function collectDetectedEnvVars(DeployConfigManager $manager, array $detected): void
+    protected function collectDetectedEnvVars(DeployConfigManager $manager, array $detected, array $existingConfig = []): void
     {
         // Secret-backed variables
         if (! empty($detected['secret'])) {
@@ -198,7 +212,8 @@ class InstallCommand extends Command
             );
 
             foreach ($selected as $key) {
-                $manager->addEnvMapping($key, $key);
+                $existingSecret = $existingConfig['env_mapping'][$key] ?? $key;
+                $manager->addEnvMapping($key, $existingSecret);
             }
 
             if (! empty($selected)) {
@@ -210,7 +225,9 @@ class InstallCommand extends Command
         if (! empty($detected['static'])) {
             $options = [];
             foreach ($detected['static'] as $key => $value) {
-                $options[$key] = "{$key} = {$value}";
+                // Use existing value if available, otherwise .env.example value
+                $displayValue = $existingConfig['env_static'][$key] ?? $value;
+                $options[$key] = "{$key} = {$displayValue}";
             }
 
             $selected = multiselect(
@@ -222,7 +239,8 @@ class InstallCommand extends Command
 
             // Let the user edit values for selected items
             foreach ($selected as $key) {
-                $currentValue = $detected['static'][$key];
+                // Prefer existing config value over .env.example default
+                $currentValue = $existingConfig['env_static'][$key] ?? $detected['static'][$key];
                 $value = text(
                     label: "{$key}",
                     default: $currentValue,
@@ -240,7 +258,9 @@ class InstallCommand extends Command
         if (! empty($detected['build'])) {
             $options = [];
             foreach ($detected['build'] as $key => $value) {
-                $options[$key] = "{$key} = {$value}";
+                // Use existing value if available
+                $displayValue = $existingConfig['build_env'][$key] ?? $value;
+                $options[$key] = "{$key} = {$displayValue}";
             }
 
             $selected = multiselect(
@@ -251,7 +271,8 @@ class InstallCommand extends Command
             );
 
             foreach ($selected as $key) {
-                $currentValue = $detected['build'][$key];
+                // Prefer existing config value over .env.example default
+                $currentValue = $existingConfig['build_env'][$key] ?? $detected['build'][$key];
                 $value = text(
                     label: "{$key}",
                     default: $currentValue,

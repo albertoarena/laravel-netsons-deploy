@@ -198,6 +198,29 @@ describe('netsons:install', function () {
 });
 
 describe('netsons:install workflow features', function () {
+    // B8 fix: Reconfigure preserves existing values in generated workflow
+    it('preserves existing env_static values when reconfiguring', function () {
+        // Simulate existing config with user-customized values
+        File::put($this->jsonPath, json_encode([
+            'env_static' => ['SESSION_DRIVER' => 'database', 'LARAVEL_PDF_DRIVER' => 'dompdf'],
+            'build_env' => ['VITE_APP_NAME' => 'My Custom App'],
+            'custom_commands' => ['permission:cache-reset'],
+            'envaudit' => true,
+        ]));
+
+        // Non-interactive regeneration should use existing JSON as-is
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('SESSION_DRIVER=database');
+        expect($contents)->toContain('LARAVEL_PDF_DRIVER=dompdf');
+        expect($contents)->toContain('VITE_APP_NAME');
+        expect($contents)->toContain('My Custom App');
+        expect($contents)->toContain('permission:cache-reset');
+        expect($contents)->toContain('envaudit');
+    });
+
     // B15: SSH agent env export
     it('exports SSH agent env vars to GITHUB_ENV', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
