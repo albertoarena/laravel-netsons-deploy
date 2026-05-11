@@ -50,18 +50,19 @@ class DeployConfigManager
     }
 
     /**
-     * Parse .env.example and categorize variables into secret-backed and static suggestions.
+     * Parse .env.example and categorize variables into secret-backed, static, and build suggestions.
      *
-     * @return array{secret: list<string>, static: array<string, string>}
+     * @return array{secret: list<string>, static: array<string, string>, build: array<string, string>}
      */
     public static function parseEnvExample(string $envExamplePath): array
     {
         if (! file_exists($envExamplePath)) {
-            return ['secret' => [], 'static' => []];
+            return ['secret' => [], 'static' => [], 'build' => []];
         }
 
         $secretKeys = [];
         $staticKeys = [];
+        $buildKeys = [];
 
         // Keys that are secret-backed (credentials, passwords, keys)
         $secretPatterns = [
@@ -75,7 +76,6 @@ class DeployConfigManager
         $excludePrefixes = [
             'APP_', 'DB_', 'MAIL_', 'REDIS_', 'AWS_',
             'LOG_', 'BROADCAST_', 'FILESYSTEM_', 'QUEUE_', 'CACHE_',
-            'VITE_',
         ];
 
         // Values that indicate "not configured" — skip for static suggestions
@@ -127,11 +127,18 @@ class DeployConfigManager
                 continue;
             }
 
+            // VITE_* goes to build (for yarn build) — not static
+            if (str_starts_with($key, 'VITE_')) {
+                $buildKeys[$key] = $value;
+
+                continue;
+            }
+
             // Detect as static candidate
             $staticKeys[$key] = $value;
         }
 
-        return ['secret' => $secretKeys, 'static' => $staticKeys];
+        return ['secret' => $secretKeys, 'static' => $staticKeys, 'build' => $buildKeys];
     }
 
     public function has(string $section, string $key): bool

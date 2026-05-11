@@ -495,15 +495,43 @@ describe('parseEnvExample', function () {
         expect($result['static'])->toBe([]);
     });
 
-    it('excludes VITE_* from static detection', function () {
+    it('detects VITE_* as build variables', function () {
         $envFile = $this->tempDir.'/.env.example';
         file_put_contents($envFile, implode("\n", [
             'VITE_APP_NAME=MyApp',
+            'VITE_API_URL=http://localhost',
         ]));
 
         $result = DeployConfigManager::parseEnvExample($envFile);
 
+        expect($result['build'])->toBe([
+            'VITE_APP_NAME' => 'MyApp',
+            'VITE_API_URL' => 'http://localhost',
+        ]);
         expect($result['static'])->toBe([]);
+    });
+
+    it('skips VITE_* with placeholder values', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'VITE_APP_NAME=',
+            'VITE_OTHER=null',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['build'])->toBe([]);
+    });
+
+    it('returns empty build array when no VITE_* found', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'SESSION_DRIVER=database',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['build'])->toBe([]);
     });
 
     it('excludes DB_* MAIL_* REDIS_* prefixes from static detection', function () {

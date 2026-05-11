@@ -138,7 +138,7 @@ class InstallCommand extends Command
         $envExamplePath = base_path('.env.example');
         $detected = DeployConfigManager::parseEnvExample($envExamplePath);
 
-        if (! empty($detected['secret']) || ! empty($detected['static'])) {
+        if (! empty($detected['secret']) || ! empty($detected['static']) || ! empty($detected['build'])) {
             $this->collectDetectedEnvVars($manager, $detected);
         } else {
             // Fallback to manual entry if no .env.example or no detected vars
@@ -233,6 +233,37 @@ class InstallCommand extends Command
 
             if (! empty($selected)) {
                 info('Added '.count($selected).' static variable(s).');
+            }
+        }
+
+        // Build variables (VITE_*)
+        if (! empty($detected['build'])) {
+            $options = [];
+            foreach ($detected['build'] as $key => $value) {
+                $options[$key] = "{$key} = {$value}";
+            }
+
+            $selected = multiselect(
+                label: 'Select build variables (VITE_* for asset compilation)',
+                options: $options,
+                default: array_keys($options),
+                hint: 'Space to toggle, Enter to confirm',
+            );
+
+            foreach ($selected as $key) {
+                $currentValue = $detected['build'][$key];
+                $value = text(
+                    label: "{$key}",
+                    default: $currentValue,
+                    hint: 'Edit value or press Enter to keep',
+                );
+                $manager->addBuildEnv($key, $value);
+                // VITE_* also goes to env_static for server-side access
+                $manager->addEnvStatic($key, $value);
+            }
+
+            if (! empty($selected)) {
+                info('Added '.count($selected).' build variable(s) (also set in .env).');
             }
         }
 

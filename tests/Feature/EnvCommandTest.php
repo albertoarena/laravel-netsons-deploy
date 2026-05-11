@@ -133,6 +133,40 @@ describe('netsons:env add', function () {
         expect($data['env_static'])->toBe(['SESSION_DRIVER' => 'database']);
     });
 
+    it('auto-routes VITE_* static variable to both env_static and build_env', function () {
+        $this->artisan('netsons:env', ['action' => 'add'])
+            ->expectsChoice('What type of variable?', 'static', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
+            ])
+            ->expectsQuestion('ENV variable name', 'VITE_APP_NAME')
+            ->expectsQuestion('Value', 'My App')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['env_static'])->toBe(['VITE_APP_NAME' => 'My App']);
+        expect($data['build_env'])->toBe(['VITE_APP_NAME' => 'My App']);
+    });
+
+    it('auto-routes VITE_* build variable to both build_env and env_static', function () {
+        $this->artisan('netsons:env', ['action' => 'add'])
+            ->expectsChoice('What type of variable?', 'build', [
+                'secret' => 'Secret-backed (from GitHub Secrets)',
+                'static' => 'Static (fixed value)',
+                'build' => 'Build (available during asset build)',
+            ])
+            ->expectsQuestion('ENV variable name', 'VITE_API_URL')
+            ->expectsQuestion('Value', 'https://api.example.com')
+            ->expectsConfirmation('Regenerate deploy workflow now?', 'no')
+            ->assertSuccessful();
+
+        $data = json_decode(File::get($this->jsonPath), true);
+        expect($data['build_env'])->toBe(['VITE_API_URL' => 'https://api.example.com']);
+        expect($data['env_static'])->toBe(['VITE_API_URL' => 'https://api.example.com']);
+    });
+
     it('adds a build env variable interactively', function () {
         $this->artisan('netsons:env', ['action' => 'add'])
             ->expectsChoice('What type of variable?', 'build', [

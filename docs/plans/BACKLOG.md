@@ -588,8 +588,9 @@ Update `DeployConfigManager::parseEnvExample()` to:
 ## B10: Auto-route VITE_* variables to build_env
 
 **Priority:** UX fix
-**Status:** Planned
+**Status:** DONE
 **Date added:** 2026-05-10
+**Date completed:** 2026-05-11
 
 ### Problem
 

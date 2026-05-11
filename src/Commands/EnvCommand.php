@@ -170,6 +170,12 @@ class EnvCommand extends Command
         $value = text('Value');
 
         $this->configManager->addEnvStatic($envKey, $value);
+
+        // VITE_* also needs to be in build_env for yarn build
+        if (str_starts_with($envKey, 'VITE_')) {
+            $this->configManager->addBuildEnv($envKey, $value);
+            note('VITE_* variable also added to build env for asset compilation.');
+        }
     }
 
     protected function addBuild(): void
@@ -187,6 +193,12 @@ class EnvCommand extends Command
         $value = text('Value');
 
         $this->configManager->addBuildEnv($envKey, $value);
+
+        // VITE_* also needs to be in env_static for server-side access
+        if (str_starts_with($envKey, 'VITE_')) {
+            $this->configManager->addEnvStatic($envKey, $value);
+            note('VITE_* variable also added to .env for server-side access.');
+        }
     }
 
     protected function removeVariable(): int
