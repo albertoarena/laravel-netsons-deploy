@@ -348,10 +348,11 @@ jobs:
             # Update current symlink
             ln -sfn ${RELEASE_PATH} ${DEPLOY_BASE}/current
 
-            # Generate proxy index.php
-            cat > ${DEPLOY_BASE}/index.php <<'PROXY'
+            # Generate proxy index.php in public/ (where .htaccess routes to)
+            mkdir -p ${DEPLOY_BASE}/public
+            cat > ${DEPLOY_BASE}/public/index.php <<'PROXY'
           <?php
-          $releasePath = __DIR__ . '/current';
+          $releasePath = dirname(__DIR__) . '/current';
           if (file_exists($releasePath . '/storage/framework/maintenance.php')) {
               require $releasePath . '/storage/framework/maintenance.php';
           }

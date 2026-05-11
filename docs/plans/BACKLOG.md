@@ -896,3 +896,29 @@ Aligned the heredoc body and `REMOTE` delimiter to the same indentation level as
 | File | Changes |
 |------|---------|
 | `stubs/workflows/deploy.yml.stub` | Fix key:generate heredoc indentation |
+
+---
+
+## B19: Fix proxy index.php placed at wrong location
+
+**Priority:** Bug fix (500 Internal Server Error on deploy)
+**Status:** DONE
+**Date added:** 2026-05-11
+**Date completed:** 2026-05-11
+
+### Problem
+
+The deployment results in a 500 Internal Server Error because the proxy `index.php` and root `.htaccess` are inconsistent. The root `.htaccess` rewrites all requests to `public/`, but the proxy `index.php` was placed at the deploy root (`~/deploy-path/index.php`). Apache rewrites to `public/`, looks for `public/index.php`, but it doesn't exist — 500 error.
+
+### Fix
+
+Moved the proxy `index.php` from `${DEPLOY_BASE}/index.php` to `${DEPLOY_BASE}/public/index.php` (where `.htaccess` routes requests). Changed `__DIR__ . '/current'` to `dirname(__DIR__) . '/current'` since the proxy is now one level deeper. Added `mkdir -p ${DEPLOY_BASE}/public` to ensure the directory exists.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Move proxy to `public/index.php`, use `dirname(__DIR__)` |
+| `action.yml` | Same fix in "Activate release" step |
+| `src/Services/ProxyIndexGenerator.php` | Update docblock to reflect new location |
+| `tests/Unit/ProxyIndexGeneratorTest.php` | Add test for new location comment |

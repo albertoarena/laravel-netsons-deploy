@@ -40,4 +40,10 @@ describe('generate', function () {
         $result = $this->generator->generate($path);
         expect($result)->toContain($path);
     });
+
+    it('mentions its location in the public subdirectory', function () {
+        $result = $this->generator->generate('/home/user/releases/20240101120000');
+        expect($result)->toContain('public/');
+        expect($result)->not->toContain('document root');
+    });
 });

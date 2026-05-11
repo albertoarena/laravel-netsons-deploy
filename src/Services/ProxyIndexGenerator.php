@@ -16,8 +16,8 @@ class ProxyIndexGenerator
 /**
  * Proxy index.php — routes requests to the active Laravel release.
  *
- * This file sits in the document root (public_html/) and bootstraps
- * Laravel from the current release directory.
+ * This file sits in the public/ subdirectory (where .htaccess routes
+ * requests) and bootstraps Laravel from the current release directory.
  */
 
 // Check for maintenance mode
