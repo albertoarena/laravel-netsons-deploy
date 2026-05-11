@@ -820,3 +820,26 @@ echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
 | `stubs/workflows/deploy.yml.stub` | Add GITHUB_ENV exports after ssh-add |
 | `action.yml` | Add GITHUB_ENV exports after ssh-add |
 | `tests/Feature/InstallCommandTest.php` | Test SSH setup exports agent env vars |
+
+---
+
+## B16: Fix heredoc indentation in key:generate step
+
+**Priority:** Bug fix (syntax error in generated workflow)
+**Status:** DONE
+**Date added:** 2026-05-11
+**Date completed:** 2026-05-11
+
+### Problem
+
+The "Generate app key on first deploy" step in the workflow stub had the heredoc body and closing `REMOTE` delimiter over-indented (12 spaces instead of 10). In GitHub Actions `run: |` blocks, YAML strips indentation based on the first content line. The extra 2 spaces on `REMOTE` meant bash saw `  REMOTE` instead of `REMOTE`, causing `unexpected end of file`.
+
+### Fix
+
+Aligned the heredoc body and `REMOTE` delimiter to the same indentation level as all other heredoc blocks in the stub.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Fix key:generate heredoc indentation |

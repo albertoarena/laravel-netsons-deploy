@@ -239,10 +239,10 @@ jobs:
             "[ -f ~/${{ vars.DEPLOY_PATH }}/.first_deploy ] && echo yes || echo no")
           if [ "$FIRST_DEPLOY" = "yes" ]; then
             ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
-              set -euo pipefail
-              cd ~/${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}
-              ${{ env.REMOTE_PHP }} artisan key:generate --force
-            REMOTE
+            set -euo pipefail
+            cd ~/${{ vars.DEPLOY_PATH }}/releases/${{ steps.release.outputs.dir }}
+            ${{ env.REMOTE_PHP }} artisan key:generate --force
+          REMOTE
           fi
 
       # ── Update .env values ──────────────────────────────────────────────
