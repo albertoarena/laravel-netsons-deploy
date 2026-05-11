@@ -79,16 +79,16 @@ class EnvManager
 
         $lines = [];
 
-        // Secret-backed variables: escape at runtime
+        // Secret-backed variables: escape at runtime, quote for dotenv compatibility
         foreach ($envMapping as $envKey => $secretName) {
             $lines[] = "{$indent}ESCAPED=\$(printf '%s' \"\${{$envKey}}\" | sed 's/[|&\\\\]/\\\\&/g')";
-            $lines[] = "{$indent}sed -i \"s|^{$envKey}=.*|{$envKey}=\\\${ESCAPED}|\" \\\${ENV_FILE}";
+            $lines[] = "{$indent}sed -i \"s|^{$envKey}=.*|{$envKey}=\\\"\\\${ESCAPED}\\\"|\" \\\${ENV_FILE}";
         }
 
-        // Static variables: values known at generation time
+        // Static variables: values known at generation time, quote for dotenv compatibility
         foreach ($envStatic as $envKey => $value) {
             $escapedValue = $this->escapeForSed($value);
-            $lines[] = "{$indent}sed -i \"s|^{$envKey}=.*|{$envKey}={$escapedValue}|\" \\\${ENV_FILE}";
+            $lines[] = "{$indent}sed -i \"s|^{$envKey}=.*|{$envKey}=\\\"{$escapedValue}\\\"|\" \\\${ENV_FILE}";
         }
 
         return implode("\n", $lines);

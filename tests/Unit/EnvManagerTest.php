@@ -206,6 +206,32 @@ describe('generateWorkflowSedBlock', function () {
         expect($result)->toContain('\\${ENV_FILE}');
     });
 
+    it('quotes static values in sed commands for dotenv compatibility', function () {
+        $result = $this->manager->generateWorkflowSedBlock(
+            [],
+            ['VITE_APP_NAME' => 'Trasporti Congresso']
+        );
+        // Value with spaces must be quoted for dotenv parser
+        // Output contains escaped quotes for sed: \"Trasporti Congresso\"
+        expect($result)->toContain('VITE_APP_NAME=\\"Trasporti Congresso\\"');
+    });
+
+    it('quotes simple static values too for consistency', function () {
+        $result = $this->manager->generateWorkflowSedBlock(
+            [],
+            ['SESSION_DRIVER' => 'database']
+        );
+        expect($result)->toContain('SESSION_DRIVER=\\"database\\"');
+    });
+
+    it('quotes secret-backed values in sed commands', function () {
+        $result = $this->manager->generateWorkflowSedBlock(
+            ['DB_PASSWORD' => 'DB_PASSWORD'],
+            []
+        );
+        expect($result)->toContain('DB_PASSWORD=\\"\\${ESCAPED}\\"');
+    });
+
     it('uses consistent indentation', function () {
         $result = $this->manager->generateWorkflowSedBlock(
             ['KEY' => 'KEY'],

@@ -213,8 +213,8 @@ describe('netsons:install workflow features', function () {
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('SESSION_DRIVER=database');
-        expect($contents)->toContain('LARAVEL_PDF_DRIVER=dompdf');
+        expect($contents)->toContain('SESSION_DRIVER=\\"database\\"');
+        expect($contents)->toContain('LARAVEL_PDF_DRIVER=\\"dompdf\\"');
         expect($contents)->toContain('VITE_APP_NAME');
         expect($contents)->toContain('My Custom App');
         expect($contents)->toContain('permission:cache-reset');

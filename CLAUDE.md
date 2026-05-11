@@ -146,6 +146,10 @@ Always run these checks before committing:
 
 If Pint reports issues, fix them with `composer lint:fix` and include the fixes in the commit.
 
+## .env Value Quoting
+
+Any value written to a `.env` file (via sed commands in the generated workflow) **must be quoted** if it contains spaces or special characters. The dotenv parser fails on unquoted values with spaces (e.g., `VITE_APP_NAME=My App` must be `VITE_APP_NAME="My App"`). This applies to both static values generated at workflow creation time and runtime values from GitHub Secrets.
+
 ## Config Design (`config/netsons-deploy.php`)
 
 ```php
