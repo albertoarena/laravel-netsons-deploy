@@ -823,6 +823,34 @@ echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
 
 ---
 
+## B17: Fix ENV_FILE variable expansion in generated sed commands
+
+**Priority:** Bug fix (breaks .env updates on deploy)
+**Status:** DONE
+**Date added:** 2026-05-11
+**Date completed:** 2026-05-11
+
+### Problem
+
+The "Update .env values" step uses an unquoted `<<REMOTE` heredoc. The hardcoded sed commands in the stub correctly escape `\${ENV_FILE}` to prevent local shell expansion. But `EnvManager::generateWorkflowSedBlock()` outputs `${ENV_FILE}` **without** the backslash. The local shell expands `${ENV_FILE}` to empty (not set on the runner), so sed receives no filename and fails with `sed: no input files`.
+
+### Root cause
+
+In `EnvManager.php`, the generated lines used `\${ENV_FILE}` in PHP double-quoted strings, which produces `${ENV_FILE}` in the output. Needed `\\\${ENV_FILE}` to produce `\${ENV_FILE}` in the YAML.
+
+### Fix
+
+Changed `\${ENV_FILE}` to `\\\${ENV_FILE}` in both the secret-backed and static sed generation loops in `EnvManager::generateWorkflowSedBlock()`.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Services/EnvManager.php` | Add backslash escape to `${ENV_FILE}` in generated sed commands |
+| `tests/Unit/EnvManagerTest.php` | Test that generated sed commands include `\${ENV_FILE}` |
+
+---
+
 ## B16: Fix heredoc indentation in key:generate step
 
 **Priority:** Bug fix (syntax error in generated workflow)

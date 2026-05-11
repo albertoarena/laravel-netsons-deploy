@@ -180,12 +180,20 @@ describe('generateWorkflowSedBlock', function () {
         expect($result)->toContain('s/[|&\\\\]/\\\\&/g');
     });
 
-    it('targets ENV_FILE variable', function () {
+    it('targets ENV_FILE variable with backslash escape', function () {
         $result = $this->manager->generateWorkflowSedBlock(
             ['KEY' => 'KEY'],
             []
         );
-        expect($result)->toContain('${ENV_FILE}');
+        expect($result)->toContain('\\${ENV_FILE}');
+    });
+
+    it('escapes ENV_FILE in static sed commands too', function () {
+        $result = $this->manager->generateWorkflowSedBlock(
+            [],
+            ['SESSION_DRIVER' => 'database']
+        );
+        expect($result)->toContain('\\${ENV_FILE}');
     });
 
     it('uses consistent indentation', function () {
