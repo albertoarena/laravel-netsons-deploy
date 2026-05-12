@@ -491,12 +491,12 @@ describe('netsons:install workflow features', function () {
         expect($contents)->toContain('secrets.GIT_TOKEN');
     });
 
-    it('uses env.CLONE_URL in git deploy step', function () {
+    it('uses CLONE_URL env var in git deploy step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('env.CLONE_URL');
+        expect($contents)->toContain('"${CLONE_URL}"');
     });
 
     // G1: Git strategy skips PHP/Composer on runner

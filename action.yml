@@ -186,20 +186,28 @@ runs:
     - name: Deploy via Git
       if: inputs.strategy == 'git'
       shell: bash
+      env:
+        SSH_HOST: ${{ inputs.ssh-host }}
+        SSH_PORT: ${{ inputs.ssh-port }}
+        SSH_USER: ${{ inputs.ssh-user }}
+        DEPLOY_PATH: ${{ inputs.deploy-path }}
+        REMOTE_PHP: ${{ inputs.remote-php }}
+        GIT_BRANCH_VAL: ${{ inputs.git-branch }}
+        RELEASE_DIR: ${{ steps.release.outputs.dir }}
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+        ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
           set -euo pipefail
-          cd ~/${{ inputs.deploy-path }}
-          rm -rf releases/${{ steps.release.outputs.dir }}
-          git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 "${{ env.CLONE_URL }}" releases/${{ steps.release.outputs.dir }}
-          cd releases/${{ steps.release.outputs.dir }}
-          ${{ inputs.remote-php }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+          cd ~/${DEPLOY_PATH}
+          rm -rf releases/${RELEASE_DIR}
+          git clone --branch ${GIT_BRANCH_VAL} --single-branch --depth 1 "${CLONE_URL}" releases/${RELEASE_DIR}
+          cd releases/${RELEASE_DIR}
+          ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           rm -rf .git .github tests
         REMOTE
 
         # Upload built assets
         if [ -d "public/build" ]; then
-          scp -P ${{ inputs.ssh-port }} -r public/build ${{ inputs.ssh-user }}@${{ inputs.ssh-host }}:~/${{ inputs.deploy-path }}/releases/${{ steps.release.outputs.dir }}/public/
+          scp -P ${SSH_PORT} -r public/build ${SSH_USER}@${SSH_HOST}:~/${DEPLOY_PATH}/releases/${RELEASE_DIR}/public/
         fi
 
     # ── Shared resources ──────────────────────────────────────────────────

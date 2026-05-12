@@ -209,20 +209,22 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           REMOTE_PHP: ${{ env.REMOTE_PHP }}
+          GIT_BRANCH_VAL: ${{ vars.GIT_BRANCH || 'main' }}
+          RELEASE_DIR: ${{ steps.release.outputs.dir }}
         run: |
-          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
             set -euo pipefail
-            cd ~/${{ vars.DEPLOY_PATH }}
-            rm -rf releases/${{ steps.release.outputs.dir }}
-            git clone --branch ${{ vars.GIT_BRANCH || 'main' }} --single-branch --depth 1 "${{ env.CLONE_URL }}" releases/${{ steps.release.outputs.dir }}
-            cd releases/${{ steps.release.outputs.dir }}
-            ${{ env.REMOTE_PHP }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            cd ~/${DEPLOY_PATH}
+            rm -rf releases/${RELEASE_DIR}
+            git clone --branch ${GIT_BRANCH_VAL} --single-branch --depth 1 "${CLONE_URL}" releases/${RELEASE_DIR}
+            cd releases/${RELEASE_DIR}
+            ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
             rm -rf .git .github tests
           REMOTE
 
           # Upload built assets
           if [ -d "public/build" ]; then
-            scp -P ${SSH_PORT} -r public/build ${SSH_USER}@${SSH_HOST}:~/${DEPLOY_PATH}/releases/${{ steps.release.outputs.dir }}/public/
+            scp -P ${SSH_PORT} -r public/build ${SSH_USER}@${SSH_HOST}:~/${DEPLOY_PATH}/releases/${RELEASE_DIR}/public/
           fi
 
       # ── Shared resources (symlinks) ─────────────────────────────────────

@@ -121,3 +121,32 @@ This works because:
 - Update existing test to verify "Prepare clone URL" step exists
 - Verify `CLONE_URL` is written to `$GITHUB_ENV`
 - Verify deploy step uses `${{ env.CLONE_URL }}`
+
+---
+
+## Update: Slash Escaping Issue (2026-05-13)
+
+### Problem
+
+GitHub Actions escapes forward slashes when expanding `${{ env.CLONE_URL }}` in YAML. The clone URL becomes `https:\/\/github.com\/...` which git cannot parse.
+
+### Root Cause
+
+`${{ }}` expressions in GitHub Actions are sanitized to prevent injection. This escaping breaks URLs containing `://` and `/`.
+
+### Fix
+
+Avoid `${{ env.CLONE_URL }}` entirely. Instead:
+
+1. The "Prepare clone URL" step writes `CLONE_URL` to `$GITHUB_ENV` (unchanged)
+2. The deploy step uses an **unquoted heredoc** (`<<REMOTE`) so bash expands `${CLONE_URL}` as a regular env var — no GitHub Actions escaping
+3. All other values (`DEPLOY_PATH`, `SSH_HOST`, etc.) are also passed as env vars in the step's `env:` block and expanded by bash
+4. `${{ }}` expressions are only used in the `env:` block (where escaping doesn't happen), not inside the heredoc
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `stubs/workflows/deploy.yml.stub` | Deploy step: use unquoted heredoc, all values via env vars |
+| `action.yml` | Same |
+| `tests/Feature/InstallCommandTest.php` | Update test to check for `${CLONE_URL}` instead of `env.CLONE_URL` |
