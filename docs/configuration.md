@@ -76,7 +76,7 @@ Check your FTP root in cPanel > Files > FTP Accounts > Configure FTP Client.
 ],
 ```
 
-Only used with the Git strategy. The repo URL should use SSH format (e.g., `git@github.com:user/repo.git`).
+Only used with the Git strategy. The repo URL must use HTTPS format (e.g., `https://github.com/user/repo.git`). SSH format (`git@github.com:...`) does not work — Netsons blocks outbound SSH on port 22.
 
 ## Release Management
 

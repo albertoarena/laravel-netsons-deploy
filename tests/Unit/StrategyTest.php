@@ -115,7 +115,7 @@ describe('GitStrategy', function () {
         $config = [
             'strategy' => 'git',
             'ssh' => ['host' => 'example.com', 'port' => 65100, 'user' => 'deploy'],
-            'git' => ['repo' => 'git@github.com:user/repo.git', 'branch' => 'main'],
+            'git' => ['repo' => 'https://github.com/user/repo.git', 'branch' => 'main'],
             'deploy_path' => 'public_html',
         ];
         $errors = $this->strategy->validate($config);
@@ -137,7 +137,7 @@ describe('GitStrategy', function () {
         $config = [
             'strategy' => 'git',
             'ssh' => ['host' => 'example.com', 'port' => 65100, 'user' => 'deploy'],
-            'git' => ['repo' => 'git@github.com:user/repo.git', 'branch' => 'main'],
+            'git' => ['repo' => 'https://github.com/user/repo.git', 'branch' => 'main'],
             'deploy_path' => '',
         ];
         $errors = $this->strategy->validate($config);
