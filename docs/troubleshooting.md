@@ -34,6 +34,19 @@ Copy the full output to the `SSH_KNOWN_HOSTS` secret.
 2. Check the private key in `SSH_PRIVATE_KEY` includes the full content (from `-----BEGIN` to `-----END`)
 3. If using a passphrase, ensure `SSH_KEY_PASSPHRASE` is set correctly
 
+### Git clone fails with "Permission denied" on private repo
+
+The git strategy uses SSH agent forwarding to authenticate with GitHub from the Netsons server. If `git clone` fails with a permission error:
+
+1. Ensure your SSH key's **public half** is added as a **deploy key** on the GitHub repository (Settings > Deploy keys, read-only is sufficient)
+2. Regenerate your workflow to include SSH agent forwarding (added in **v1.7.0**):
+   ```bash
+   php artisan netsons:install --force
+   ```
+3. Verify the Netsons server allows agent forwarding (`AllowAgentForwarding yes` in sshd config — this is the default on most servers)
+
+See [Private Repository Setup](github-secrets.md#private-repository-setup-git-strategy) for full details.
+
 ## PHP Version Mismatch
 
 ### "php: command not found" or wrong PHP version
