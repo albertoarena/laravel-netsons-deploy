@@ -181,7 +181,7 @@ return [
 
     // Git settings (only for git strategy)
     'git' => [
-        'repo' => env('NETSONS_GIT_REPO'),       // e.g. git@github.com:user/repo.git
+        'repo' => env('NETSONS_GIT_REPO'),       // e.g. https://github.com/user/repo.git
         'branch' => env('NETSONS_GIT_BRANCH', 'main'),
     ],
 

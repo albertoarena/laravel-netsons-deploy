@@ -4,7 +4,7 @@ set -euo pipefail
 # ============================================================================
 # deploy-git.sh — Git deployment strategy
 #
-# Clones or pulls the repository on the server via SSH, then receives
+# Clones the repository on the server via SSH using HTTPS, then receives
 # built assets via SCP.
 #
 # Required environment variables:
@@ -13,8 +13,9 @@ set -euo pipefail
 #   SSH_USER        — SSH username
 #   DEPLOY_PATH     — Remote deploy path relative to home (e.g. public_html)
 #   RELEASE_DIR     — Release timestamp directory name (e.g. 20240101120000)
-#   GIT_REPO        — Git repository URL
+#   GIT_REPO        — Git repository HTTPS URL
 #   GIT_BRANCH      — Git branch to deploy (default: main)
+#   GIT_TOKEN       — GitHub token for private repos (optional)
 #   PHP_BINARY      — Remote PHP binary path (e.g. /usr/local/bin/ea-php84)
 #   COMPOSER_PATH   — Remote Composer path (default: /opt/cpanel/composer/bin/composer)
 # ============================================================================
@@ -26,26 +27,29 @@ log() {
 SSH_PORT="${SSH_PORT:-65100}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
 COMPOSER_PATH="${COMPOSER_PATH:-/opt/cpanel/composer/bin/composer}"
-SSH_CMD="ssh -A -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST}"
+SSH_CMD="ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST}"
+
+# Build clone URL — inject token for private repos (HTTPS)
+if [ -n "${GIT_TOKEN:-}" ]; then
+    CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")
+else
+    CLONE_URL="${GIT_REPO}"
+fi
 
 log "Deploying via git clone on server..."
 
-# Clone repository into release directory
-${SSH_CMD} bash -s <<REMOTE
+# Clone repository into release directory (pass clone URL as argument to avoid it in the heredoc)
+${SSH_CMD} bash -s -- "${CLONE_URL}" <<REMOTE
 set -euo pipefail
+CLONE_URL="\$1"
 cd ~/${DEPLOY_PATH}
-
-# Ensure GitHub host keys are known on the server (for private repos)
-mkdir -p ~/.ssh
-ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts
 
 # Create releases directory if needed
 mkdir -p releases
 
 # Clone the repository into the release directory
-echo "Cloning ${GIT_REPO} (branch: ${GIT_BRANCH})..."
-git clone --branch ${GIT_BRANCH} --single-branch --depth 1 ${GIT_REPO} releases/${RELEASE_DIR}
+echo "Cloning repository (branch: ${GIT_BRANCH})..."
+git clone --branch ${GIT_BRANCH} --single-branch --depth 1 "\${CLONE_URL}" releases/${RELEASE_DIR}
 
 cd releases/${RELEASE_DIR}
 

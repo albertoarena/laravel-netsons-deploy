@@ -61,11 +61,14 @@ inputs:
     description: 'FTP password (FTP strategy only)'
     default: ''
   git-repo:
-    description: 'Git repository URL (git strategy only)'
+    description: 'Git repository HTTPS URL (git strategy only)'
     default: ''
   git-branch:
     description: 'Git branch to deploy (git strategy only)'
     default: 'main'
+  git-token:
+    description: 'GitHub token for private repo access (git strategy only)'
+    default: ''
 
 runs:
   using: 'composite'
@@ -170,18 +173,22 @@ runs:
     - name: Deploy via Git
       if: inputs.strategy == 'git'
       shell: bash
+      env:
+        GIT_TOKEN: ${{ inputs.git-token }}
       run: |
-        ssh -A -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+        # Build clone URL — inject token for private repos (HTTPS)
+        if [ -n "${GIT_TOKEN}" ]; then
+          CLONE_URL=$(echo "${{ inputs.git-repo }}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")
+        else
+          CLONE_URL="${{ inputs.git-repo }}"
+        fi
+
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s -- "${CLONE_URL}" <<'REMOTE'
           set -euo pipefail
+          CLONE_URL="$1"
           cd ~/${{ inputs.deploy-path }}
-
-          # Ensure GitHub host keys are known on the server (for private repos)
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-          sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts
-
           rm -rf releases/${{ steps.release.outputs.dir }}
-          git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 ${{ inputs.git-repo }} releases/${{ steps.release.outputs.dir }}
+          git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 "${CLONE_URL}" releases/${{ steps.release.outputs.dir }}
           cd releases/${{ steps.release.outputs.dir }}
           ${{ inputs.remote-php }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           rm -rf .git .github tests

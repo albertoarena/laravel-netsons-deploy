@@ -34,18 +34,27 @@ Copy the full output to the `SSH_KNOWN_HOSTS` secret.
 2. Check the private key in `SSH_PRIVATE_KEY` includes the full content (from `-----BEGIN` to `-----END`)
 3. If using a passphrase, ensure `SSH_KEY_PASSPHRASE` is set correctly
 
-### Git clone fails with "Permission denied" on private repo
+### Git clone fails on the server
 
-The git strategy uses SSH agent forwarding to authenticate with GitHub from the Netsons server. If `git clone` fails with a permission error:
+Netsons shared hosting blocks outbound SSH (port 22), so `git@github.com:...` URLs do not work. Use HTTPS format for `GIT_REPO`:
 
-1. Ensure your SSH key's **public half** is added as a **deploy key** on the GitHub repository (Settings > Deploy keys, read-only is sufficient)
-2. Regenerate your workflow to include SSH agent forwarding (added in **v1.7.0**):
-   ```bash
-   php artisan netsons:install --force
-   ```
-3. Verify the Netsons server allows agent forwarding (`AllowAgentForwarding yes` in sshd config — this is the default on most servers)
+```
+https://github.com/user/repo.git
+```
 
-See [Private Repository Setup](github-secrets.md#private-repository-setup-git-strategy) for full details.
+If you were using SSH format, update the `GIT_REPO` variable and regenerate the workflow:
+
+```bash
+php artisan netsons:install --force
+```
+
+### "fatal: could not read Username" during git clone
+
+This means the repo is private but no token was provided. Set `GIT_TOKEN` — see [Private Repositories](git-strategy.md#private-repositories).
+
+### "fatal: Authentication failed" during git clone
+
+The `GIT_TOKEN` secret is set but the token is invalid or expired. For same-repo deploys, use `${{ github.token }}` in the workflow. For PATs, check the token hasn't expired and has read access to the repo contents.
 
 ## PHP Version Mismatch
 

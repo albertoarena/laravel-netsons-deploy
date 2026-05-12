@@ -470,33 +470,32 @@ describe('netsons:install workflow features', function () {
         expect($contents)->not->toContain('envaudit');
     });
 
-    // SSH agent forwarding for private repos (git strategy)
-    it('uses SSH agent forwarding in git deploy step', function () {
+    // HTTPS cloning for git strategy (Netsons blocks outbound SSH)
+    it('does not use SSH agent forwarding in git deploy step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('ssh -A -p ${SSH_PORT}');
+        expect($contents)->not->toContain('ssh -A');
+        expect($contents)->not->toContain('ssh-keyscan github.com');
     });
 
-    it('does not use SSH agent forwarding in non-git SSH steps', function () {
+    it('includes GIT_TOKEN env var in git deploy step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-
-        // The -A flag should appear exactly once — in the git deploy step
-        // Other steps (create release dir, shared resources, etc.) should use plain ssh
-        $agentForwardingCount = substr_count($contents, 'ssh -A');
-        expect($agentForwardingCount)->toBe(1);
+        expect($contents)->toContain('GIT_TOKEN:');
+        expect($contents)->toContain('secrets.GIT_TOKEN');
     });
 
-    it('injects GitHub known hosts in git deploy step', function () {
+    it('includes token injection logic for private repos', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('ssh-keyscan github.com');
+        expect($contents)->toContain('x-access-token');
+        expect($contents)->toContain('GIT_TOKEN');
     });
 
     // G1: Git strategy skips PHP/Composer on runner

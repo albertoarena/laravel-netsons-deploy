@@ -40,7 +40,7 @@ Unlike the FTP strategy, the git strategy **does not** run PHP setup or Composer
 | `APP_ENV` | Application environment |
 | `APP_DEBUG` | Debug mode |
 | `APP_URL` | Application URL |
-| `GIT_REPO` | Git repository URL (SSH format) |
+| `GIT_REPO` | Git repository HTTPS URL |
 | `GIT_BRANCH` | Git branch to deploy |
 
 ## Server Requirements
@@ -50,22 +50,38 @@ Unlike the FTP strategy, the git strategy **does not** run PHP setup or Composer
 - **PHP CLI** — use the full path (e.g., `/usr/local/bin/ea-php84`)
 - **SSH access** — with key authentication
 
+## Public Repositories
+
+For public repos, set `GIT_REPO` to the HTTPS URL:
+
+```
+https://github.com/user/repo.git
+```
+
+No additional configuration is needed.
+
 ## Private Repositories
 
-The workflow uses **SSH agent forwarding** (`-A`) so the runner's SSH key is available on the Netsons server during `git clone`. This means private repositories work out of the box, provided the SSH key has read access to the GitHub repository.
+For private repos, a GitHub token is needed so the Netsons server can authenticate when cloning. Netsons shared hosting blocks outbound SSH (port 22), so HTTPS with token authentication is used instead.
 
-### Setup
+### Using GITHUB_TOKEN (recommended for same-repo deploys)
 
-1. Use the same SSH key pair you generated for Netsons SSH access
-2. Go to your GitHub repo > **Settings** > **Deploy keys**
-3. Click **Add deploy key**
-4. Paste the **public key** (e.g., `~/.ssh/id_ed25519.pub`)
-5. Leave "Allow write access" unchecked (read-only is sufficient)
-6. Click **Add key**
+Edit your `.github/workflows/deploy.yml` and change the `GIT_TOKEN` line in the "Deploy via Git" step:
 
-The workflow also automatically adds GitHub's host keys to the server's `known_hosts` before cloning, so no manual SSH configuration is needed on Netsons.
+```yaml
+GIT_TOKEN: ${{ github.token }}
+```
 
-> **Note:** The same SSH private key authenticates to both Netsons (for SSH access) and GitHub (for git clone via agent forwarding). See [GitHub Secrets](github-secrets.md#private-repository-setup-git-strategy) for details.
+`github.token` is automatically provided by GitHub Actions with read access to the repository. No secrets to create or rotate.
+
+### Using a Personal Access Token (cross-repo or fine-grained control)
+
+1. Create a fine-grained PAT at github.com > Settings > Developer settings > Personal access tokens > Fine-grained tokens
+2. Grant **read-only** access to the repository contents
+3. Add it as a secret named `GIT_TOKEN` in your repo (Settings > Secrets)
+4. The workflow already references `${{ secrets.GIT_TOKEN }}`
+
+See [GitHub Secrets](github-secrets.md#private-repository-setup-git-strategy) for details.
 
 ## Composer on Netsons
 

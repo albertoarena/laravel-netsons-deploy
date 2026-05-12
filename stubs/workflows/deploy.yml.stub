@@ -197,21 +197,24 @@ jobs:
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           GIT_REPO: ${{ vars.GIT_REPO }}
           GIT_BRANCH: ${{ vars.GIT_BRANCH || 'main' }}
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
           REMOTE_PHP: ${{ env.REMOTE_PHP }}
         run: |
-          ssh -A -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
+          # Build clone URL — inject token for private repos (HTTPS)
+          if [ -n "${GIT_TOKEN}" ]; then
+            CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")
+          else
+            CLONE_URL="${GIT_REPO}"
+          fi
+
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s -- "${CLONE_URL}" <<'REMOTE'
             set -euo pipefail
-            cd ~/${DEPLOY_PATH}
-
-            # Ensure GitHub host keys are known on the server (for private repos)
-            mkdir -p ~/.ssh
-            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-            sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts
-
+            CLONE_URL="$1"
+            cd ~/${{ vars.DEPLOY_PATH }}
             rm -rf releases/${{ steps.release.outputs.dir }}
-            git clone --branch ${GIT_BRANCH} --single-branch --depth 1 ${GIT_REPO} releases/${{ steps.release.outputs.dir }}
+            git clone --branch ${{ vars.GIT_BRANCH || 'main' }} --single-branch --depth 1 "${CLONE_URL}" releases/${{ steps.release.outputs.dir }}
             cd releases/${{ steps.release.outputs.dir }}
-            ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+            ${{ env.REMOTE_PHP }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
             rm -rf .git .github tests
           REMOTE
 

@@ -73,9 +73,9 @@ Trigger the workflow from GitHub Actions > Deploy to Netsons > Run workflow.
 | **Transfer method** | Incremental FTP sync | `git clone --depth 1` |
 | **Speed** | Slower (full upload first time) | Faster (shallow clone) |
 | **Best for** | Any Netsons plan | SSD 30+ plans with git |
-| **Private repos** | Supported (uploaded from runner) | Supported via SSH agent forwarding |
+| **Private repos** | Supported (uploaded from runner) | Supported via HTTPS + token |
 
-> **Private repos with Git strategy:** The workflow uses SSH agent forwarding (`-A`) so the runner's SSH key is available on the server during `git clone`. Add your SSH key's public half as a [GitHub deploy key](docs/github-secrets.md#private-repository-setup-git-strategy) (read-only).
+> **Private repos with Git strategy:** Set `GIT_REPO` to the HTTPS URL and configure `GIT_TOKEN`. For same-repo deploys, use `${{ github.token }}`. See [Private Repository Setup](docs/github-secrets.md#private-repository-setup-git-strategy).
 
 ## Usage as a Reusable GitHub Action
 

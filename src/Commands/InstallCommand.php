@@ -660,7 +660,7 @@ YAML;
             'APP_ENV' => 'Application environment (e.g. production)',
             'APP_DEBUG' => 'Debug mode (true/false)',
             'APP_URL' => 'Application URL',
-            'GIT_REPO' => 'Git repository URL (e.g. git@github.com:user/repo.git)',
+            'GIT_REPO' => 'Git repository HTTPS URL (e.g. https://github.com/user/repo.git)',
             'GIT_BRANCH' => 'Git branch to deploy (e.g. main)',
             default => '',
         };
