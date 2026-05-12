@@ -48,14 +48,22 @@ The Git strategy clones your repository directly on the server via SSH and insta
 - **PHP CLI** — use the full path (e.g., `/usr/local/bin/ea-php84`)
 - **SSH access** — with key authentication
 
-## SSH Key for Git Clone
+## Private Repositories
 
-The server needs SSH access to your GitHub repository. You can either:
+The workflow uses **SSH agent forwarding** (`-A`) so the runner's SSH key is available on the Netsons server during `git clone`. This means private repositories work out of the box, provided the SSH key has read access to the GitHub repository.
 
-1. **Deploy key** — add a read-only deploy key to the repository
-2. **SSH key** — use the same SSH key configured for server access
+### Setup
 
-For deploy keys, add the server's public key in GitHub > Repository > Settings > Deploy keys.
+1. Use the same SSH key pair you generated for Netsons SSH access
+2. Go to your GitHub repo > **Settings** > **Deploy keys**
+3. Click **Add deploy key**
+4. Paste the **public key** (e.g., `~/.ssh/id_ed25519.pub`)
+5. Leave "Allow write access" unchecked (read-only is sufficient)
+6. Click **Add key**
+
+The workflow also automatically adds GitHub's host keys to the server's `known_hosts` before cloning, so no manual SSH configuration is needed on Netsons.
+
+> **Note:** The same SSH private key authenticates to both Netsons (for SSH access) and GitHub (for git clone via agent forwarding). See [GitHub Secrets](github-secrets.md#private-repository-setup-git-strategy) for details.
 
 ## Composer on Netsons
 

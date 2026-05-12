@@ -121,3 +121,7 @@ git --version
 ```
 
 Git is available on SSD 30+ plans. Lower plans do not have git and must use the FTP strategy.
+
+### Private Repositories
+
+For private repos, the SSH key used for Netsons access must also be registered as a deploy key on GitHub. The workflow handles SSH agent forwarding and GitHub host key setup automatically. See [Private Repository Setup](github-secrets.md#private-repository-setup-git-strategy) for details.

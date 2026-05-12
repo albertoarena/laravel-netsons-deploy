@@ -160,9 +160,15 @@ runs:
       if: inputs.strategy == 'git'
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+        ssh -A -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
           set -euo pipefail
           cd ~/${{ inputs.deploy-path }}
+
+          # Ensure GitHub host keys are known on the server (for private repos)
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+          sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts
+
           rm -rf releases/${{ steps.release.outputs.dir }}
           git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 ${{ inputs.git-repo }} releases/${{ steps.release.outputs.dir }}
           cd releases/${{ steps.release.outputs.dir }}

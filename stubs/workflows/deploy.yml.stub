@@ -179,9 +179,15 @@ jobs:
           GIT_BRANCH: ${{ vars.GIT_BRANCH || 'main' }}
           REMOTE_PHP: ${{ env.REMOTE_PHP }}
         run: |
-          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
+          ssh -A -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
             set -euo pipefail
             cd ~/${DEPLOY_PATH}
+
+            # Ensure GitHub host keys are known on the server (for private repos)
+            mkdir -p ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+            sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts
+
             rm -rf releases/${{ steps.release.outputs.dir }}
             git clone --branch ${GIT_BRANCH} --single-branch --depth 1 ${GIT_REPO} releases/${{ steps.release.outputs.dir }}
             cd releases/${{ steps.release.outputs.dir }}

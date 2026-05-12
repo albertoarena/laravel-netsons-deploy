@@ -470,6 +470,35 @@ describe('netsons:install workflow features', function () {
         expect($contents)->not->toContain('envaudit');
     });
 
+    // SSH agent forwarding for private repos (git strategy)
+    it('uses SSH agent forwarding in git deploy step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('ssh -A -p ${SSH_PORT}');
+    });
+
+    it('does not use SSH agent forwarding in non-git SSH steps', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // The -A flag should appear exactly once — in the git deploy step
+        // Other steps (create release dir, shared resources, etc.) should use plain ssh
+        $agentForwardingCount = substr_count($contents, 'ssh -A');
+        expect($agentForwardingCount)->toBe(1);
+    });
+
+    it('injects GitHub known hosts in git deploy step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('ssh-keyscan github.com');
+    });
+
     // B20: Root .htaccess uses RewriteCond to prevent loop
     it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])

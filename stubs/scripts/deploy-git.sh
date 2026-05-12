@@ -26,7 +26,7 @@ log() {
 SSH_PORT="${SSH_PORT:-65100}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
 COMPOSER_PATH="${COMPOSER_PATH:-/opt/cpanel/composer/bin/composer}"
-SSH_CMD="ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST}"
+SSH_CMD="ssh -A -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST}"
 
 log "Deploying via git clone on server..."
 
@@ -34,6 +34,11 @@ log "Deploying via git clone on server..."
 ${SSH_CMD} bash -s <<REMOTE
 set -euo pipefail
 cd ~/${DEPLOY_PATH}
+
+# Ensure GitHub host keys are known on the server (for private repos)
+mkdir -p ~/.ssh
+ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+sort -u -o ~/.ssh/known_hosts ~/.ssh/known_hosts
 
 # Create releases directory if needed
 mkdir -p releases
