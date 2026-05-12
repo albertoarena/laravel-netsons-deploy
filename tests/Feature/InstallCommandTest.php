@@ -480,22 +480,23 @@ describe('netsons:install workflow features', function () {
         expect($contents)->not->toContain('ssh-keyscan github.com');
     });
 
-    it('includes GIT_TOKEN env var in git deploy step', function () {
+    it('has a Prepare clone URL step that writes to GITHUB_ENV', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('GIT_TOKEN:');
+        expect($contents)->toContain('Prepare clone URL');
+        expect($contents)->toContain('GITHUB_ENV');
+        expect($contents)->toContain('x-access-token');
         expect($contents)->toContain('secrets.GIT_TOKEN');
     });
 
-    it('includes token injection logic for private repos', function () {
+    it('uses env.CLONE_URL in git deploy step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('x-access-token');
-        expect($contents)->toContain('GIT_TOKEN');
+        expect($contents)->toContain('env.CLONE_URL');
     });
 
     // G1: Git strategy skips PHP/Composer on runner

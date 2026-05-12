@@ -169,25 +169,29 @@ runs:
           **/.env.*
           **/storage/logs/**
 
-    # ── Deploy (Git) ──────────────────────────────────────────────────────
-    - name: Deploy via Git
+    # ── Prepare clone URL (Git only) ─────────────────────────────────────
+    - name: Prepare clone URL
       if: inputs.strategy == 'git'
       shell: bash
       env:
         GIT_TOKEN: ${{ inputs.git-token }}
       run: |
-        # Build clone URL — inject token for private repos (HTTPS)
         if [ -n "${GIT_TOKEN}" ]; then
-          CLONE_URL=$(echo "${{ inputs.git-repo }}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")
+          echo "CLONE_URL=$(echo "${{ inputs.git-repo }}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")" >> $GITHUB_ENV
         else
-          CLONE_URL="${{ inputs.git-repo }}"
+          echo "CLONE_URL=${{ inputs.git-repo }}" >> $GITHUB_ENV
         fi
 
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+    # ── Deploy (Git) ──────────────────────────────────────────────────────
+    - name: Deploy via Git
+      if: inputs.strategy == 'git'
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
           set -euo pipefail
           cd ~/${{ inputs.deploy-path }}
           rm -rf releases/${{ steps.release.outputs.dir }}
-          git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 "${CLONE_URL}" releases/${{ steps.release.outputs.dir }}
+          git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 "${{ env.CLONE_URL }}" releases/${{ steps.release.outputs.dir }}
           cd releases/${{ steps.release.outputs.dir }}
           ${{ inputs.remote-php }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
           rm -rf .git .github tests

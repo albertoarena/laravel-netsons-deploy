@@ -187,6 +187,19 @@ jobs:
             **/.env.*
             **/storage/logs/**
 
+      # ── Prepare clone URL (Git only) ────────────────────────────────────
+      - name: Prepare clone URL
+        if: env.STRATEGY == 'git'
+        env:
+          GIT_REPO: ${{ vars.GIT_REPO }}
+          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: |
+          if [ -n "${GIT_TOKEN}" ]; then
+            echo "CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")" >> $GITHUB_ENV
+          else
+            echo "CLONE_URL=${GIT_REPO}" >> $GITHUB_ENV
+          fi
+
       # ── Deploy (Git strategy) ──────────────────────────────────────────
       - name: Deploy via Git
         if: env.STRATEGY == 'git'
@@ -195,23 +208,13 @@ jobs:
           SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
-          GIT_REPO: ${{ vars.GIT_REPO }}
-          GIT_BRANCH: ${{ vars.GIT_BRANCH || 'main' }}
-          GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
           REMOTE_PHP: ${{ env.REMOTE_PHP }}
         run: |
-          # Build clone URL — inject token for private repos (HTTPS)
-          if [ -n "${GIT_TOKEN}" ]; then
-            CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")
-          else
-            CLONE_URL="${GIT_REPO}"
-          fi
-
-          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
             set -euo pipefail
             cd ~/${{ vars.DEPLOY_PATH }}
             rm -rf releases/${{ steps.release.outputs.dir }}
-            git clone --branch ${{ vars.GIT_BRANCH || 'main' }} --single-branch --depth 1 "${CLONE_URL}" releases/${{ steps.release.outputs.dir }}
+            git clone --branch ${{ vars.GIT_BRANCH || 'main' }} --single-branch --depth 1 "${{ env.CLONE_URL }}" releases/${{ steps.release.outputs.dir }}
             cd releases/${{ steps.release.outputs.dir }}
             ${{ env.REMOTE_PHP }} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
             rm -rf .git .github tests
