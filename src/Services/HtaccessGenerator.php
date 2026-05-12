@@ -13,8 +13,8 @@ class HtaccessGenerator
     RewriteEngine On
 
     # Redirect all requests to public/ subdirectory
-    RewriteRule ^$ public/ [L]
-    RewriteRule (.*) public/$1 [L]
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 HTACCESS;
     }

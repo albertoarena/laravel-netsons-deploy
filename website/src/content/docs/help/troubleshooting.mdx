@@ -119,6 +119,12 @@ Check if `mod_rewrite` is enabled (usually enabled by default on Netsons).
 
 If the error occurs after a fresh deploy, ensure the proxy `index.php` is at `public/index.php` (not at the deploy root). The root `.htaccess` rewrites all requests to `public/`, so the proxy must be there. If you generated your workflow before **v1.6.3**, run `netsons:install --force` to regenerate it with the fix.
 
+Also check that the root `.htaccess` uses `RewriteCond %{REQUEST_URI} !^/public/` to prevent a rewrite loop. Without this condition, Apache rewrites `public/` to `public/public/` infinitely and returns 500. Workflows generated before **v1.6.4** had this issue — regenerate with `netsons:install --force`.
+
+### Routes return 404 (e.g., /login)
+
+If the home page works but sub-routes return 404, the `public/.htaccess` (Laravel's front controller rules) is missing from the deploy base. The deploy should copy it from the release during activation. Workflows generated before **v1.6.4** did not include this step — regenerate with `netsons:install --force`.
+
 ### Assets not loading (CSS/JS 404)
 
 Ensure the proxy `index.php` and `.htaccess` are set up. The root `.htaccess` should rewrite to `public/`.

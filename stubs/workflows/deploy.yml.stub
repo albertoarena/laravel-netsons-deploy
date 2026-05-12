@@ -276,8 +276,8 @@ jobs:
             cat > ~/${{ vars.DEPLOY_PATH }}/.htaccess <<'HTACCESS'
           <IfModule mod_rewrite.c>
               RewriteEngine On
-              RewriteRule ^$ public/ [L]
-              RewriteRule (.*) public/$1 [L]
+              RewriteCond %{REQUEST_URI} !^/public/
+              RewriteRule ^(.*)$ public/$1 [L]
           </IfModule>
           HTACCESS
           REMOTE
@@ -358,6 +358,11 @@ jobs:
           }
           require $releasePath . '/public/index.php';
           PROXY
+
+            # Copy public .htaccess (Laravel front controller rules)
+            if [ -f "${RELEASE_PATH}/public/.htaccess" ]; then
+              cp ${RELEASE_PATH}/public/.htaccess ${DEPLOY_BASE}/public/.htaccess
+            fi
 
             # Copy public assets
             if [ -d "${RELEASE_PATH}/public/build" ]; then

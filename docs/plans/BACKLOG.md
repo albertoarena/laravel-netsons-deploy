@@ -922,3 +922,55 @@ Moved the proxy `index.php` from `${DEPLOY_BASE}/index.php` to `${DEPLOY_BASE}/p
 | `action.yml` | Same fix in "Activate release" step |
 | `src/Services/ProxyIndexGenerator.php` | Update docblock to reflect new location |
 | `tests/Unit/ProxyIndexGeneratorTest.php` | Add test for new location comment |
+
+---
+
+## B20: Fix root .htaccess rewrite loop
+
+**Priority:** Bug fix (500 Internal Server Error — rewrite loop)
+**Status:** DONE
+**Date added:** 2026-05-12
+**Date completed:** 2026-05-12
+
+### Problem
+
+The root `.htaccess` had two rewrite rules: `RewriteRule ^$ public/ [L]` and `RewriteRule (.*) public/$1 [L]`. The second rule matches URLs already rewritten to `public/`, creating an infinite loop (`public/` → `public/public/` → ...) that Apache detects and returns 500. This was always broken but was masked by the previous proxy placement bug (B19).
+
+### Fix
+
+Replaced both rules with a single rule guarded by `RewriteCond %{REQUEST_URI} !^/public/` to skip rewriting when the URL already starts with `/public/`.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `src/Services/HtaccessGenerator.php` | Fix `generateRoot()` with RewriteCond |
+| `stubs/workflows/deploy.yml.stub` | Fix inline root .htaccess content |
+| `action.yml` | Same fix in "Upload root .htaccess" step |
+| `tests/Unit/HtaccessGeneratorTest.php` | Add tests for RewriteCond and single rule |
+| `tests/Feature/InstallCommandTest.php` | Test generated workflow has RewriteCond |
+
+---
+
+## B21: Add public/.htaccess to deployment
+
+**Priority:** Bug fix (404 on sub-routes like /login)
+**Status:** DONE
+**Date added:** 2026-05-12
+**Date completed:** 2026-05-12
+
+### Problem
+
+The deploy creates the proxy `index.php` at `${DEPLOY_BASE}/public/` and copies build assets there, but never places Laravel's `public/.htaccess` (front controller rewrite rules). Without these rules, only `/` works — all other routes (e.g., `/login`) get a 404 from Apache because there's no file matching that path and no rewrite to `index.php`.
+
+### Fix
+
+In the "Activate release" step, copy the release's `public/.htaccess` to `${DEPLOY_BASE}/public/.htaccess` alongside the proxy and build assets.
+
+### Affected files
+
+| File | Changes |
+|------|---------|
+| `stubs/workflows/deploy.yml.stub` | Copy `public/.htaccess` from release during activation |
+| `action.yml` | Same fix in "Activate release" step |
+| `tests/Feature/InstallCommandTest.php` | Test generated workflow copies public .htaccess |

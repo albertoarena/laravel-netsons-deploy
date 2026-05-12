@@ -469,4 +469,23 @@ describe('netsons:install workflow features', function () {
         $contents = File::get($this->workflowPath);
         expect($contents)->not->toContain('envaudit');
     });
+
+    // B20: Root .htaccess uses RewriteCond to prevent loop
+    it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('RewriteCond %{REQUEST_URI} !^/public/');
+    });
+
+    // B21: Copy public .htaccess during release activation
+    it('copies public htaccess from release during activation', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('public/.htaccess');
+        expect($contents)->toContain('DEPLOY_BASE}/public/.htaccess');
+    });
 });

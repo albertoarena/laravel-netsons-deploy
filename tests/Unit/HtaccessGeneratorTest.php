@@ -28,6 +28,16 @@ describe('generateRoot', function () {
         $result = $this->generator->generateRoot();
         expect($result)->toContain('RewriteRule');
     });
+
+    it('uses RewriteCond to prevent rewrite loop', function () {
+        $result = $this->generator->generateRoot();
+        expect($result)->toContain('RewriteCond %{REQUEST_URI} !^/public/');
+    });
+
+    it('uses a single RewriteRule', function () {
+        $result = $this->generator->generateRoot();
+        expect(substr_count($result, 'RewriteRule'))->toBe(1);
+    });
 });
 
 describe('generatePublic', function () {
