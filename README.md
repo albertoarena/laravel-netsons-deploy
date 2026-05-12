@@ -67,8 +67,8 @@ Trigger the workflow from GitHub Actions > Deploy to Netsons > Run workflow.
 | Feature | FTP | Git |
 |---|---|---|
 | **How it works** | Builds locally, uploads via FTP | Clones repo on server via SSH |
-| **Asset building** | In GitHub Actions runner | In GitHub Actions, uploaded via SCP |
-| **Composer install** | In GitHub Actions runner | On server using Netsons PHP CLI |
+| **PHP/Composer** | On runner (uploaded with app) | On server (runner skips PHP/Composer) |
+| **Node/Assets** | On runner (uploaded with app) | On runner, uploaded via SCP |
 | **Requires on server** | FTP access | Git + SSH access (SSD 30+ plans) |
 | **Transfer method** | Incremental FTP sync | `git clone --depth 1` |
 | **Speed** | Slower (full upload first time) | Faster (shallow clone) |

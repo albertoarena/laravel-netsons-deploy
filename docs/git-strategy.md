@@ -4,14 +4,16 @@ The Git strategy clones your repository directly on the server via SSH and insta
 
 ## How It Works
 
-1. **Build** — GitHub Actions prepares Laravel directories, builds Node assets locally (with dependency caching for faster builds)
+1. **Build assets** — GitHub Actions builds Node/CSS/JS assets locally (Netsons doesn't have Node)
 2. **Clone** — The repository is cloned on the server via SSH (`git clone --depth 1`)
 3. **Install** — Composer dependencies are installed on the server using the Netsons PHP binary
-4. **Upload assets** — Built CSS/JS assets are uploaded to the server via SCP
+4. **Upload assets** — Built CSS/JS assets are uploaded from the runner to the server via SCP
 5. **First deploy** — If first deploy, generates `APP_KEY` and runs configured seeders
 6. **Post-deploy** — Symlinks are set up, `.env` values updated, migrations run, caches rebuilt
 7. **Switch** — The `current` symlink is updated to point to the new release
 8. **Cleanup** — Old releases beyond the keep count are removed, SSH agent cleaned up
+
+Unlike the FTP strategy, the git strategy **does not** run PHP setup or Composer on the GitHub Actions runner — those only run on the Netsons server. The runner's only build responsibility is Node assets, which are uploaded via SCP after the server-side clone.
 
 ## When to Use
 

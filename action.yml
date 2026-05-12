@@ -122,8 +122,9 @@ runs:
       shell: bash
       run: echo "dir=$(date -u '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
-    # ── Create release directory ──────────────────────────────────────────
+    # ── Create release directory (FTP only — copies current for incremental sync) ──
     - name: Create release directory
+      if: inputs.strategy == 'ftp'
       shell: bash
       run: |
         ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
@@ -133,6 +134,16 @@ runs:
           if [ -L current ]; then
             cp -a current/. releases/${{ steps.release.outputs.dir }}/
           fi
+        REMOTE
+
+    # ── Ensure releases directory exists (Git only — git clone creates the release dir) ──
+    - name: Ensure releases directory
+      if: inputs.strategy == 'git'
+      shell: bash
+      run: |
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+          set -euo pipefail
+          mkdir -p ~/${{ inputs.deploy-path }}/releases
         REMOTE
 
     # ── Deploy (FTP) ──────────────────────────────────────────────────────

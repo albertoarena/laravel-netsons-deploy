@@ -43,34 +43,39 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ── Prepare Laravel directories ──────────────────────────────────────
+      # ── Prepare Laravel directories (FTP only — git clones fresh on server) ──
       - name: Prepare Laravel directories
+        if: env.STRATEGY == 'ftp'
         run: |
           mkdir -p bootstrap/cache
           mkdir -p storage/framework/{sessions,views,cache}
 
-      # ── PHP Setup ───────────────────────────────────────────────────────
+      # ── PHP Setup (FTP only — git runs composer on server) ──────────────
       - name: Setup PHP
+        if: env.STRATEGY == 'ftp'
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: mbstring, xml, ctype, json, bcmath, curl
           coverage: none
 
-      # ── Composer Cache ──────────────────────────────────────────────────
+      # ── Composer Cache (FTP only) ───────────────────────────────────────
       - name: Get Composer cache directory
+        if: env.STRATEGY == 'ftp'
         id: composer-cache
         run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
       - name: Cache Composer dependencies
+        if: env.STRATEGY == 'ftp'
         uses: actions/cache@v4
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
-      # ── Composer Install ────────────────────────────────────────────────
+      # ── Composer Install (FTP only — git runs composer on server) ───────
       - name: Install Composer dependencies
+        if: env.STRATEGY == 'ftp'
         run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
 
       # ── Node Setup ──────────────────────────────────────────────────────
@@ -130,8 +135,9 @@ jobs:
         id: release
         run: echo "dir=$(date -u '+%Y%m%d%H%M%S')" >> $GITHUB_OUTPUT
 
-      # ── Create release directory on server ──────────────────────────────
+      # ── Create release directory on server (FTP only — copies current for incremental sync) ──
       - name: Create release directory
+        if: env.STRATEGY == 'ftp'
         env:
           SSH_HOST: ${{ secrets.SSH_HOST }}
           SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
@@ -145,6 +151,20 @@ jobs:
             if [ -L current ]; then
               cp -a current/. releases/${{ steps.release.outputs.dir }}/
             fi
+          REMOTE
+
+      # ── Ensure releases directory exists (Git only — git clone creates the release dir) ──
+      - name: Ensure releases directory
+        if: env.STRATEGY == 'git'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT || '65100' }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+        run: |
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
+            set -euo pipefail
+            mkdir -p ~/${{ vars.DEPLOY_PATH }}/releases
           REMOTE
 
       # ── Deploy (FTP strategy) ───────────────────────────────────────────

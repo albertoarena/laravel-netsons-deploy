@@ -499,6 +499,62 @@ describe('netsons:install workflow features', function () {
         expect($contents)->toContain('ssh-keyscan github.com');
     });
 
+    // G1: Git strategy skips PHP/Composer on runner
+    it('skips runner PHP and Composer steps for git strategy', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // These steps should be conditional on FTP
+        expect($contents)->toMatch('/- name: Prepare Laravel directories\s+if: env\.STRATEGY == \'ftp\'/');
+        expect($contents)->toMatch('/- name: Setup PHP\s+if: env\.STRATEGY == \'ftp\'/');
+        expect($contents)->toMatch('/- name: Get Composer cache directory\s+if: env\.STRATEGY == \'ftp\'/');
+        expect($contents)->toMatch('/- name: Cache Composer dependencies\s+if: env\.STRATEGY == \'ftp\'/');
+        expect($contents)->toMatch('/- name: Install Composer dependencies\s+if: env\.STRATEGY == \'ftp\'/');
+    });
+
+    it('does not skip Node setup and build for git strategy', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // Node steps must NOT have FTP-only conditionals
+        expect($contents)->not->toMatch('/- name: Setup Node\.js\s+if:/');
+        expect($contents)->not->toMatch('/- name: Install Node dependencies\s+if:/');
+        expect($contents)->not->toMatch('/- name: Build assets\s+if:/');
+    });
+
+    // G2: Git strategy skips copy-current release, uses simpler mkdir
+    it('skips copy-current release step for git strategy', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // The copy-current step should be FTP-only
+        expect($contents)->toMatch('/- name: Create release directory\s+if: env\.STRATEGY == \'ftp\'/');
+
+        // Git should have a simpler step that just ensures releases/ exists
+        expect($contents)->toContain('Ensure releases directory');
+    });
+
+    it('keeps all runner build steps unconditional for ftp strategy', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // All build steps should still be present
+        expect($contents)->toContain('Prepare Laravel directories');
+        expect($contents)->toContain('Setup PHP');
+        expect($contents)->toContain('Install Composer dependencies');
+        expect($contents)->toContain('Setup Node.js');
+        expect($contents)->toContain('Build assets');
+        expect($contents)->toContain('Create release directory');
+    });
+
     // B20: Root .htaccess uses RewriteCond to prevent loop
     it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
