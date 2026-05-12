@@ -496,7 +496,7 @@ describe('netsons:install workflow features', function () {
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
-        expect($contents)->toContain('"${CLONE_URL}"');
+        expect($contents)->toContain('${CLONE_URL}');
     });
 
     // G1: Git strategy skips PHP/Composer on runner

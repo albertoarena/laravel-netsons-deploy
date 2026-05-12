@@ -195,15 +195,13 @@ runs:
         GIT_BRANCH_VAL: ${{ inputs.git-branch }}
         RELEASE_DIR: ${{ steps.release.outputs.dir }}
       run: |
-        ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
-          set -euo pipefail
-          cd ~/${DEPLOY_PATH}
-          rm -rf releases/${RELEASE_DIR}
-          git clone --branch ${GIT_BRANCH_VAL} --single-branch --depth 1 "${CLONE_URL}" releases/${RELEASE_DIR}
-          cd releases/${RELEASE_DIR}
-          ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
-          rm -rf .git .github tests
-        REMOTE
+        # Clone repo on server (CLONE_URL from GITHUB_ENV via Prepare clone URL step)
+        ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+          "cd ~/${DEPLOY_PATH} && rm -rf releases/${RELEASE_DIR} && git clone --branch ${GIT_BRANCH_VAL} --single-branch --depth 1 '${CLONE_URL}' releases/${RELEASE_DIR}"
+
+        # Install Composer dependencies and cleanup
+        ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+          "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
 
         # Upload built assets
         if [ -d "public/build" ]; then

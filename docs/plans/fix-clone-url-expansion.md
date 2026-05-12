@@ -150,3 +150,32 @@ Avoid `${{ env.CLONE_URL }}` entirely. Instead:
 | `stubs/workflows/deploy.yml.stub` | Deploy step: use unquoted heredoc, all values via env vars |
 | `action.yml` | Same |
 | `tests/Feature/InstallCommandTest.php` | Update test to check for `${CLONE_URL}` instead of `env.CLONE_URL` |
+
+---
+
+## Update 2: Heredoc expansion unreliable (2026-05-13)
+
+### Problem
+
+Even with `CLONE_URL` set via `$GITHUB_ENV` and all values in the `env:` block, the unquoted heredoc `<<REMOTE` still produced `ssh: Could not resolve hostname https` — meaning the URL was malformed when received by the server. The `\/` escaping visible in GitHub Actions logs may be applied at the YAML processing level, not just log masking.
+
+### Fix
+
+Abandon heredocs for the git clone step entirely. Use inline SSH commands instead:
+
+```bash
+ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+  "cd ~/${DEPLOY_PATH} && rm -rf releases/${RELEASE_DIR} && git clone --branch ${GIT_BRANCH_VAL} --single-branch --depth 1 '${CLONE_URL}' releases/${RELEASE_DIR}"
+
+ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+  "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
+```
+
+This avoids all heredoc expansion issues. The env vars are expanded by bash on the runner before SSH sends the command. The clone URL is single-quoted on the remote side to prevent the server's shell from reinterpreting it.
+
+### Files changed
+
+| File | Change |
+|---|---|
+| `stubs/workflows/deploy.yml.stub` | Replace heredoc with inline SSH commands |
+| `action.yml` | Same |
