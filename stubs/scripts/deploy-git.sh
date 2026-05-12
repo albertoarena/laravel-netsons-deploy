@@ -39,9 +39,8 @@ fi
 log "Deploying via git clone on server..."
 
 # Clone repository into release directory (pass clone URL as argument to avoid it in the heredoc)
-${SSH_CMD} bash -s -- "${CLONE_URL}" <<REMOTE
+${SSH_CMD} bash -s <<REMOTE
 set -euo pipefail
-CLONE_URL="\$1"
 cd ~/${DEPLOY_PATH}
 
 # Create releases directory if needed
@@ -49,7 +48,7 @@ mkdir -p releases
 
 # Clone the repository into the release directory
 echo "Cloning repository (branch: ${GIT_BRANCH})..."
-git clone --branch ${GIT_BRANCH} --single-branch --depth 1 "\${CLONE_URL}" releases/${RELEASE_DIR}
+git clone --branch ${GIT_BRANCH} --single-branch --depth 1 "${CLONE_URL}" releases/${RELEASE_DIR}
 
 cd releases/${RELEASE_DIR}
 

@@ -183,9 +183,8 @@ runs:
           CLONE_URL="${{ inputs.git-repo }}"
         fi
 
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s -- "${CLONE_URL}" <<'REMOTE'
+        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
           set -euo pipefail
-          CLONE_URL="$1"
           cd ~/${{ inputs.deploy-path }}
           rm -rf releases/${{ steps.release.outputs.dir }}
           git clone --branch ${{ inputs.git-branch }} --single-branch --depth 1 "${CLONE_URL}" releases/${{ steps.release.outputs.dir }}

@@ -207,9 +207,8 @@ jobs:
             CLONE_URL="${GIT_REPO}"
           fi
 
-          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s -- "${CLONE_URL}" <<'REMOTE'
+          ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<REMOTE
             set -euo pipefail
-            CLONE_URL="$1"
             cd ~/${{ vars.DEPLOY_PATH }}
             rm -rf releases/${{ steps.release.outputs.dir }}
             git clone --branch ${{ vars.GIT_BRANCH || 'main' }} --single-branch --depth 1 "${CLONE_URL}" releases/${{ steps.release.outputs.dir }}
