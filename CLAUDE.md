@@ -41,10 +41,14 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 - Previous release is copied first so FTP transfers only diffs
 
 ### Git Strategy (`strategy: git`)
-- Clones/pulls repo directly on server via SSH
+- Clones repo on server via HTTPS (not SSH — Netsons blocks outbound SSH on port 22)
+- **GIT_REPO must use HTTPS format:** `https://github.com/user/repo.git`
+- For private repos, a `GIT_TOKEN` secret is injected into the clone URL as `https://x-access-token:TOKEN@github.com/...`
+- Token injection happens on the GitHub Actions runner; the URL is passed to the server via an unquoted heredoc (NOT via `bash -s --` positional args — that doesn't work through SSH)
+- `.git` directory is deleted immediately after clone so the token is not persisted
 - Runs `composer install --no-dev` on server using Netsons PHP CLI
-- Assets must be built in GitHub Actions and uploaded via SCP (Node/Yarn not available on server)
-- Uses sparse checkout to exclude unnecessary files
+- PHP/Composer steps on the runner are skipped (only needed for FTP)
+- Node assets must be built on the runner and uploaded via SCP (Node/Yarn not available on server)
 
 ### Common to both strategies
 - Release-based deployment with timestamped directories (`releases/YYYYMMDDHHMMSS/`)
