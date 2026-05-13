@@ -209,11 +209,11 @@ describe('generateWorkflowSedBlock', function () {
     it('quotes static values in sed commands for dotenv compatibility', function () {
         $result = $this->manager->generateWorkflowSedBlock(
             [],
-            ['VITE_APP_NAME' => 'Trasporti Congresso']
+            ['VITE_APP_NAME' => 'My Custom App']
         );
         // Value with spaces must be quoted for dotenv parser
-        // Output contains escaped quotes for sed: \"Trasporti Congresso\"
-        expect($result)->toContain('VITE_APP_NAME=\\"Trasporti Congresso\\"');
+        // Output contains escaped quotes for sed: \"My Custom App\"
+        expect($result)->toContain('VITE_APP_NAME=\\"My Custom App\\"');
     });
 
     it('quotes simple static values too for consistency', function () {

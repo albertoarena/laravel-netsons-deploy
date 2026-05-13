@@ -143,7 +143,8 @@ Always run these checks before committing:
 
 1. **Tests:** `composer test` (all tests must pass)
 2. **Code style:** `composer lint` (Laravel Pint must pass)
-3. **Docs sync:** if the change affects commands, config, features, or user-facing behavior, update **all three doc locations**:
+3. **Confidentiality:** verify no private repo names, project-specific URLs, deploy paths, or domain names leaked into public files (docs/, src/, tests/, README.md, plans/). Use generic placeholders like `user/repo` instead.
+4. **Docs sync:** if the change affects commands, config, features, or user-facing behavior, update **all three doc locations**:
    - `README.md`
    - `docs/` (markdown files)
    - `website/src/content/docs/` (MDX pages)

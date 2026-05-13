@@ -491,6 +491,19 @@ describe('netsons:install workflow features', function () {
         expect($contents)->toContain('secrets.GIT_TOKEN');
     });
 
+    it('does not pass GIT_REPO through env block to avoid slash escaping', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // GIT_REPO must NOT be in the env: block (GitHub Actions escapes slashes there)
+        expect($contents)->not->toMatch('/env:\s*\n\s+GIT_REPO:/');
+
+        // Instead, vars.GIT_REPO must be used directly in the run: script
+        expect($contents)->toContain('GIT_REPO="${{ vars.GIT_REPO }}"');
+    });
+
     it('uses CLONE_URL env var in git deploy step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
             ->assertSuccessful();
