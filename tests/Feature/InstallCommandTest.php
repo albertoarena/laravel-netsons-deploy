@@ -470,6 +470,14 @@ describe('netsons:install workflow features', function () {
         expect($contents)->not->toContain('envaudit');
     });
 
+    it('disables persist-credentials on checkout to prevent token leaking into Composer', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('persist-credentials: false');
+    });
+
     // HTTPS cloning for git strategy (Netsons blocks outbound SSH)
     it('does not use SSH agent forwarding in git deploy step', function () {
         $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])

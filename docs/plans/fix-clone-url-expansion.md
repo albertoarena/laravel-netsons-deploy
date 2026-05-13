@@ -231,3 +231,32 @@ The `action.yml` also needs the same treatment for `${{ inputs.git-repo }}`, sin
 | `stubs/workflows/deploy.yml.stub` | Strip backslashes from `${{ vars.GIT_REPO }}` with `tr -d '\\'` |
 | `action.yml` | Strip backslashes from `${{ inputs.git-repo }}` with `tr -d '\\'` |
 | `tests/Feature/InstallCommandTest.php` | Update test assertion for new `tr -d` pattern |
+
+---
+
+## Update 4: Prevent checkout token leaking into Composer (2026-05-13)
+
+### Problem
+
+`actions/checkout@v4` defaults to `persist-credentials: true`, which writes the ephemeral `GITHUB_TOKEN` (a JWT) into the workspace as a git credential. Composer picks this up via `auth.json` as a GitHub OAuth token.
+
+Composer's token validation rejects JWTs (they contain `.` and `_` characters), and **prints the full token in the error message**, which appears in the workflow logs. While the token is short-lived (1 hour) and auto-generated per run, it should never be exposed in logs.
+
+### Fix
+
+Add `persist-credentials: false` to the `actions/checkout@v4` step in both `deploy.yml.stub` and `action.yml`. This prevents checkout from writing the token to the workspace, so Composer never sees it.
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    persist-credentials: false
+```
+
+### Files to change
+
+| File | Change |
+|---|---|
+| `stubs/workflows/deploy.yml.stub` | Add `persist-credentials: false` to checkout step |
+| `tests/Feature/InstallCommandTest.php` | Add test asserting `persist-credentials: false` is present |
+
+Note: `action.yml` doesn't have a checkout step (composite action expects caller to checkout), so only the stub needs updating.
