@@ -87,13 +87,13 @@ Common versions:
 Composer is typically available at:
 
 ```bash
-/opt/cpanel/composer/bin/composer
+/usr/local/bin/composer
 ```
 
 Always invoke it with the correct PHP binary:
 
 ```bash
-/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer --version
+/usr/local/bin/ea-php84 /usr/local/bin/composer --version
 ```
 
 ## Directory Structure Preparation

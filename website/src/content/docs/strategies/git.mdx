@@ -29,7 +29,7 @@ Unlike the FTP strategy, the git strategy **does not** run PHP setup or Composer
 ## Server Requirements
 
 - **Git** — available on SSD 30+ plans
-- **Composer** — typically at `/opt/cpanel/composer/bin/composer`
+- **Composer** — typically at `/usr/local/bin/composer` (configurable via `REMOTE_COMPOSER`)
 - **PHP CLI** — use the full path (e.g., `/usr/local/bin/ea-php84`)
 - **SSH access** — with key authentication
 
@@ -71,10 +71,12 @@ See [GitHub Secrets](/laravel-netsons-deploy/getting-started/github-secrets/#pri
 Composer must be invoked with the correct PHP binary:
 
 ```bash
-/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer install --no-dev
+/usr/local/bin/ea-php84 /usr/local/bin/composer install --no-dev
 ```
 
-The action handles this automatically using the `remote-php` input.
+The action handles this automatically using the `remote-php` and `remote-composer` inputs. The default Composer path is `/usr/local/bin/composer`. If your server has Composer at a different location, set the `composer_binary` config option or the `REMOTE_COMPOSER` workflow env var.
+
+The git deploy step also creates `bootstrap/cache` before running `composer install`, since this directory is gitignored but required by Composer's `post-autoload-dump` scripts.
 
 ## Configuration
 

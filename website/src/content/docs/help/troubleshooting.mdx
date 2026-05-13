@@ -55,6 +55,10 @@ This means the repo is private but no token was provided. Set `GIT_TOKEN` — se
 
 The `GIT_TOKEN` secret is set but the token is invalid or expired. For same-repo deploys, use `${{ github.token }}` in the workflow. For PATs, check the token hasn't expired and has read access to the repo contents.
 
+### "ssh: Could not resolve hostname https"
+
+GitHub Actions escapes forward slashes in `${{ }}` expression substitutions, turning HTTPS URLs into `https:\/\/...`. Workflows generated since **v1.9.6** strip these backslashes automatically. If you see this error, regenerate the workflow with `php artisan netsons:install --force`.
+
 ## PHP Version
 
 ### Wrong PHP version or "command not found"
@@ -78,13 +82,19 @@ ssh -p 65100 user@server "ls /usr/local/bin/ea-php*"
 Use the full path with the correct PHP binary:
 
 ```bash
-/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer install
+/usr/local/bin/ea-php84 /usr/local/bin/composer install
 ```
+
+If Composer is at a different path, update `composer_binary` in `config/netsons-deploy.php` and regenerate the workflow with `php artisan netsons:install --force`.
+
+### "The bootstrap/cache directory must be present and writable"
+
+This occurs during `composer install` on the server (git strategy) when `bootstrap/cache` doesn't exist. Workflows generated since **v1.9.10** create this directory automatically. If you see this error, regenerate the workflow with `php artisan netsons:install --force`.
 
 ### "Allowed memory size exhausted"
 
 ```bash
-/usr/local/bin/ea-php84 -d memory_limit=-1 /opt/cpanel/composer/bin/composer install
+/usr/local/bin/ea-php84 -d memory_limit=-1 /usr/local/bin/composer install
 ```
 
 ## FTP

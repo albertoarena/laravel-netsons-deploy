@@ -35,6 +35,14 @@ Netsons uses EasyApache PHP binaries. The `php` command may point to an older ve
 - `/usr/local/bin/ea-php83`
 - `/usr/local/bin/ea-php84`
 
+## Composer Binary
+
+```php
+'composer_binary' => env('NETSONS_COMPOSER_BINARY', '/usr/local/bin/composer'),
+```
+
+The remote Composer binary path. The default `/usr/local/bin/composer` is the standard path on Netsons shared hosting. If your server has Composer at a different location (e.g., `/opt/cpanel/composer/bin/composer`), update this value.
+
 ## Deploy Path
 
 ```php
