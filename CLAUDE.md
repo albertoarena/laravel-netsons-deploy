@@ -26,7 +26,7 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 
 - **SSH port is 65100** (not 22) — this must be configurable but default to 65100
 - **PHP CLI path:** `/usr/local/bin/ea-phpXX` where XX is version (e.g., `ea-php84`). The `php` command may point to an older version. Always use the full ea-php path.
-- **Composer path:** `/opt/cpanel/composer/bin/composer` or user-installed. Composer must be invoked with the correct PHP binary: `/usr/local/bin/ea-php84 /opt/cpanel/composer/bin/composer`
+- **Composer path:** `/usr/local/bin/composer` (standard on Netsons). Composer must be invoked with the correct PHP binary: `/usr/local/bin/ea-php84 /usr/local/bin/composer`
 - **Document root:** `public_html/` by default. Laravel needs a proxy `index.php` or rewrite to `public/` subdirectory. Symlinks for document root are not reliable on shared hosting.
 - **Git is available** on SSD 30+ plans
 - **No root access**, no systemd, no supervisor

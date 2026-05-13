@@ -14,7 +14,7 @@ The FTP strategy is unaffected because it runs Composer on the GitHub Actions ru
 
 ## Fix
 
-Add a configurable `REMOTE_COMPOSER` path, defaulting to `/opt/cpanel/composer/bin/composer` for backwards compatibility.
+Add a configurable `REMOTE_COMPOSER` path, defaulting to `/usr/local/bin/composer` (the standard Netsons path).
 
 ### Changes
 

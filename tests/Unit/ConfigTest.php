@@ -75,9 +75,9 @@ describe('netsons-deploy config', function () {
         expect($config['environments'])->toHaveKeys(['stage', 'production']);
     });
 
-    it('defaults composer_binary to /opt/cpanel/composer/bin/composer', function () {
+    it('defaults composer_binary to /usr/local/bin/composer', function () {
         $config = require __DIR__.'/../../config/netsons-deploy.php';
-        expect($config['composer_binary'])->toBe('/opt/cpanel/composer/bin/composer');
+        expect($config['composer_binary'])->toBe('/usr/local/bin/composer');
     });
 
     it('defaults FTP root_path to empty string', function () {
