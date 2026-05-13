@@ -31,6 +31,7 @@ env:
   NODE_VERSION: '%%NODE_VERSION%%' # e.g. 22
   PACKAGE_MANAGER: '%%PACKAGE_MANAGER%%' # npm or yarn
   REMOTE_PHP: '%%REMOTE_PHP%%'   # e.g. /usr/local/bin/ea-php84
+  REMOTE_COMPOSER: '%%REMOTE_COMPOSER%%' # e.g. /opt/cpanel/composer/bin/composer
 
 jobs:
   deploy:
@@ -211,6 +212,7 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
           REMOTE_PHP: ${{ env.REMOTE_PHP }}
+          REMOTE_COMPOSER: ${{ env.REMOTE_COMPOSER }}
           GIT_BRANCH_VAL: ${{ vars.GIT_BRANCH || 'main' }}
           RELEASE_DIR: ${{ steps.release.outputs.dir }}
         run: |
@@ -220,7 +222,7 @@ jobs:
 
           # Install Composer dependencies and cleanup
           ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
-            "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
+            "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} ${REMOTE_COMPOSER} install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
 
           # Upload built assets
           if [ -d "public/build" ]; then

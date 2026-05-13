@@ -24,6 +24,9 @@ inputs:
   remote-php:
     description: 'Remote PHP binary path on Netsons'
     default: '/usr/local/bin/ea-php84'
+  remote-composer:
+    description: 'Remote Composer binary path on Netsons'
+    default: '/opt/cpanel/composer/bin/composer'
   deploy-path:
     description: 'Remote deploy path relative to home'
     required: true
@@ -193,6 +196,7 @@ runs:
         SSH_USER: ${{ inputs.ssh-user }}
         DEPLOY_PATH: ${{ inputs.deploy-path }}
         REMOTE_PHP: ${{ inputs.remote-php }}
+        REMOTE_COMPOSER: ${{ inputs.remote-composer }}
         GIT_BRANCH_VAL: ${{ inputs.git-branch }}
         RELEASE_DIR: ${{ steps.release.outputs.dir }}
       run: |
@@ -202,7 +206,7 @@ runs:
 
         # Install Composer dependencies and cleanup
         ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
-          "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} /opt/cpanel/composer/bin/composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
+          "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} ${REMOTE_COMPOSER} install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
 
         # Upload built assets
         if [ -d "public/build" ]; then

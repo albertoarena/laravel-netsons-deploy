@@ -577,6 +577,17 @@ describe('netsons:install workflow features', function () {
         expect($contents)->toContain('Create release directory');
     });
 
+    it('uses configurable REMOTE_COMPOSER in git deploy step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        // REMOTE_COMPOSER should be a top-level env var
+        expect($contents)->toContain('REMOTE_COMPOSER');
+        // The git deploy SSH command should use the variable, not a hardcoded path
+        expect($contents)->toContain('${REMOTE_COMPOSER} install');
+    });
+
     // B20: Root .htaccess uses RewriteCond to prevent loop
     it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])

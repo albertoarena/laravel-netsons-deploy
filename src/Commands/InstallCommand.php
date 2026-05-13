@@ -407,6 +407,7 @@ class InstallCommand extends Command
         $contents = str_replace('%%NODE_VERSION%%', '22', $contents);
         $contents = str_replace('%%PACKAGE_MANAGER%%', 'yarn', $contents);
         $contents = str_replace('%%REMOTE_PHP%%', $config['php_binary'] ?? '/usr/local/bin/ea-php84', $contents);
+        $contents = str_replace('%%REMOTE_COMPOSER%%', $config['composer_binary'] ?? '/opt/cpanel/composer/bin/composer', $contents);
         $contents = str_replace('%%RELEASES_KEEP%%', (string) ($config['releases']['keep'] ?? 5), $contents);
 
         // FTP server-dir (W9)

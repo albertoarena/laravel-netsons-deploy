@@ -16,6 +16,9 @@ return [
     // Remote PHP binary path (ea-php version)
     'php_binary' => env('NETSONS_PHP_BINARY', '/usr/local/bin/ea-php84'),
 
+    // Remote Composer binary path
+    'composer_binary' => env('NETSONS_COMPOSER_BINARY', '/opt/cpanel/composer/bin/composer'),
+
     // Remote deploy path (relative to home directory)
     'deploy_path' => env('NETSONS_DEPLOY_PATH', 'public_html'),
 
