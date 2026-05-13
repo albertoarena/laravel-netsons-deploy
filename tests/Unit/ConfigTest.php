@@ -84,4 +84,19 @@ describe('netsons-deploy config', function () {
         $config = require __DIR__.'/../../config/netsons-deploy.php';
         expect($config['ftp']['root_path'])->toBe('');
     });
+
+    it('defaults SSH retries to 3', function () {
+        $config = require __DIR__.'/../../config/netsons-deploy.php';
+        expect($config['ssh']['retries'])->toBe(3);
+    });
+
+    it('defaults SSH retry_delay to 10', function () {
+        $config = require __DIR__.'/../../config/netsons-deploy.php';
+        expect($config['ssh']['retry_delay'])->toBe(10);
+    });
+
+    it('defaults SSH connect_timeout to 30', function () {
+        $config = require __DIR__.'/../../config/netsons-deploy.php';
+        expect($config['ssh']['connect_timeout'])->toBe(30);
+    });
 });

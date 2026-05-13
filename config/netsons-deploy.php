@@ -11,6 +11,9 @@ return [
         'host' => env('NETSONS_SSH_HOST'),
         'port' => env('NETSONS_SSH_PORT', 65100),
         'user' => env('NETSONS_SSH_USER'),
+        'retries' => env('NETSONS_SSH_RETRIES', 3),
+        'retry_delay' => env('NETSONS_SSH_RETRY_DELAY', 10),
+        'connect_timeout' => env('NETSONS_SSH_CONNECT_TIMEOUT', 30),
     ],
 
     // Remote PHP binary path (ea-php version)

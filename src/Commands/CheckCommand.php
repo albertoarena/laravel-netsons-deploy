@@ -47,6 +47,9 @@ class CheckCommand extends Command
             [
                 ['Strategy', $strategy],
                 ['SSH Port', (string) ($config['ssh']['port'] ?? 65100)],
+                ['SSH Retries', (string) ($config['ssh']['retries'] ?? 3)],
+                ['SSH Retry Delay', (string) ($config['ssh']['retry_delay'] ?? 10).'s'],
+                ['SSH Connect Timeout', (string) ($config['ssh']['connect_timeout'] ?? 30).'s'],
                 ['PHP Binary', $config['php_binary'] ?? '/usr/local/bin/ea-php84'],
                 ['Deploy Path', $config['deploy_path'] ?? 'public_html'],
                 ['Releases Keep', (string) ($config['releases']['keep'] ?? 5)],

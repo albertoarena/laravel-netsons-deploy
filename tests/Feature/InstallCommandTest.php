@@ -597,6 +597,87 @@ describe('netsons:install workflow features', function () {
         expect($contents)->toContain('mkdir -p bootstrap/cache && ${REMOTE_PHP} ${REMOTE_COMPOSER}');
     });
 
+    // SSH retry resilience
+    it('includes SSH retry env vars in generated workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('SSH_RETRIES');
+        expect($contents)->toContain('SSH_RETRY_DELAY');
+        expect($contents)->toContain('SSH_CONNECT_TIMEOUT');
+    });
+
+    it('includes ssh-helpers script in SSH setup step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('ssh-helpers.sh');
+        expect($contents)->toContain('ssh_retry');
+        expect($contents)->toContain('scp_retry');
+    });
+
+    it('uses ssh_retry instead of bare ssh in deploy steps', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+
+        // SSH Setup step itself should still use bare ssh-add (not ssh_retry)
+        expect($contents)->toContain('ssh-add');
+
+        // All deploy SSH steps should use ssh_retry, not bare ssh -p
+        // Count occurrences: bare "ssh -p" should not appear outside the helper definition
+        $lines = explode("\n", $contents);
+        foreach ($lines as $line) {
+            $trimmed = trim($line);
+            // Skip lines inside the helper script definition and comments
+            if (str_starts_with($trimmed, '#') || str_contains($trimmed, 'ssh-add') || str_contains($trimmed, 'ssh-agent') || str_contains($trimmed, 'ssh-keyscan') || str_contains($trimmed, 'SSH_') || str_contains($trimmed, '.ssh/') || str_contains($trimmed, 'ssh_with_opts')) {
+                continue;
+            }
+            // Any remaining "ssh -p" should be inside ssh_retry or ssh_with_opts definition
+            if (preg_match('/^\s*ssh\s+-p\s/', $trimmed)) {
+                // This is a bare ssh -p call outside the helper — should not exist
+                expect(false)->toBeTrue("Found bare 'ssh -p' outside helper: {$trimmed}");
+            }
+        }
+    });
+
+    it('sources ssh-helpers in steps that use ssh_retry', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('source /tmp/ssh-helpers.sh');
+    });
+
+    it('replaces scp with scp_retry in git deploy step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('scp_retry');
+    });
+
+    it('only retries on exit code 255 in ssh helper', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('255');
+    });
+
+    it('replaces SSH retry placeholders with config values', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('%%SSH_RETRIES%%');
+        expect($contents)->not->toContain('%%SSH_RETRY_DELAY%%');
+        expect($contents)->not->toContain('%%SSH_CONNECT_TIMEOUT%%');
+    });
+
     // B20: Root .htaccess uses RewriteCond to prevent loop
     it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])

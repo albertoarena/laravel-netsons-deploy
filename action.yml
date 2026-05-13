@@ -48,6 +48,15 @@ inputs:
   ssh-known-hosts:
     description: 'SSH known hosts entry'
     required: true
+  ssh-retries:
+    description: 'Max SSH connection retry attempts'
+    default: '3'
+  ssh-retry-delay:
+    description: 'Seconds to wait between SSH retries'
+    default: '10'
+  ssh-connect-timeout:
+    description: 'SSH connection timeout in seconds'
+    default: '30'
   releases-keep:
     description: 'Number of releases to keep'
     default: '5'
@@ -121,6 +130,57 @@ runs:
         fi
         echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> $GITHUB_ENV
         echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> $GITHUB_ENV
+        echo "SSH_RETRIES=${{ inputs.ssh-retries }}" >> $GITHUB_ENV
+        echo "SSH_RETRY_DELAY=${{ inputs.ssh-retry-delay }}" >> $GITHUB_ENV
+        echo "SSH_CONNECT_TIMEOUT=${{ inputs.ssh-connect-timeout }}" >> $GITHUB_ENV
+        # Write SSH retry helper functions
+        cat > /tmp/ssh-helpers.sh <<'HELPERS'
+        ssh_with_opts() {
+          ssh -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-30} \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=3 \
+              "$@"
+        }
+        ssh_retry() {
+          local max_attempts=${SSH_RETRIES:-3}
+          local delay=${SSH_RETRY_DELAY:-10}
+          local attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if ssh_with_opts "$@"; then
+              return 0
+            fi
+            local exit_code=$?
+            if [ $exit_code -ne 255 ]; then
+              return $exit_code
+            fi
+            echo "::warning::SSH connection failed (attempt ${attempt}/${max_attempts}). Retrying in ${delay}s..."
+            sleep $delay
+            attempt=$((attempt + 1))
+          done
+          echo "::error::SSH connection failed after ${max_attempts} attempts"
+          return 255
+        }
+        scp_retry() {
+          local max_attempts=${SSH_RETRIES:-3}
+          local delay=${SSH_RETRY_DELAY:-10}
+          local attempt=1
+          while [ $attempt -le $max_attempts ]; do
+            if scp -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-30} "$@"; then
+              return 0
+            fi
+            local exit_code=$?
+            if [ $exit_code -ne 255 ]; then
+              return $exit_code
+            fi
+            echo "::warning::SCP connection failed (attempt ${attempt}/${max_attempts}). Retrying in ${delay}s..."
+            sleep $delay
+            attempt=$((attempt + 1))
+          done
+          echo "::error::SCP connection failed after ${max_attempts} attempts"
+          return 255
+        }
+        HELPERS
+        chmod +x /tmp/ssh-helpers.sh
 
     # ── Generate release timestamp ────────────────────────────────────────
     - name: Generate release directory
@@ -133,7 +193,8 @@ runs:
       if: inputs.strategy == 'ftp'
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
           set -euo pipefail
           cd ~/${{ inputs.deploy-path }}
           mkdir -p releases/${{ steps.release.outputs.dir }}
@@ -147,7 +208,8 @@ runs:
       if: inputs.strategy == 'git'
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
           set -euo pipefail
           mkdir -p ~/${{ inputs.deploy-path }}/releases
         REMOTE
@@ -200,24 +262,26 @@ runs:
         GIT_BRANCH_VAL: ${{ inputs.git-branch }}
         RELEASE_DIR: ${{ steps.release.outputs.dir }}
       run: |
+        source /tmp/ssh-helpers.sh
         # Clone repo on server (CLONE_URL from GITHUB_ENV via Prepare clone URL step)
-        ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+        ssh_retry -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
           "cd ~/${DEPLOY_PATH} && rm -rf releases/${RELEASE_DIR} && git clone --branch ${GIT_BRANCH_VAL} --single-branch --depth 1 '${CLONE_URL}' releases/${RELEASE_DIR}"
 
         # Install Composer dependencies and cleanup
-        ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+        ssh_retry -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
           "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && mkdir -p bootstrap/cache && ${REMOTE_PHP} ${REMOTE_COMPOSER} install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
 
         # Upload built assets
         if [ -d "public/build" ]; then
-          scp -P ${SSH_PORT} -r public/build ${SSH_USER}@${SSH_HOST}:~/${DEPLOY_PATH}/releases/${RELEASE_DIR}/public/
+          scp_retry -P ${SSH_PORT} -r public/build ${SSH_USER}@${SSH_HOST}:~/${DEPLOY_PATH}/releases/${RELEASE_DIR}/public/
         fi
 
     # ── Shared resources ──────────────────────────────────────────────────
     - name: Setup shared resources
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
           set -euo pipefail
           DEPLOY_BASE=~/${{ inputs.deploy-path }}
           RELEASE_PATH=${DEPLOY_BASE}/releases/${{ steps.release.outputs.dir }}
@@ -243,7 +307,8 @@ runs:
     - name: Post-deploy
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
           set -euo pipefail
           cd ~/${{ inputs.deploy-path }}/releases/${{ steps.release.outputs.dir }}
           ${{ inputs.remote-php }} artisan migrate --force --no-interaction
@@ -259,7 +324,8 @@ runs:
     - name: Activate release
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
           set -euo pipefail
           DEPLOY_BASE=~/${{ inputs.deploy-path }}
           RELEASE_PATH=${DEPLOY_BASE}/releases/${{ steps.release.outputs.dir }}
@@ -292,7 +358,8 @@ runs:
     - name: Upload root .htaccess
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<'REMOTE'
           cat > ~/${{ inputs.deploy-path }}/.htaccess <<'HTACCESS'
         <IfModule mod_rewrite.c>
             RewriteEngine On
@@ -306,7 +373,8 @@ runs:
     - name: Cleanup old releases
       shell: bash
       run: |
-        ssh -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
+        source /tmp/ssh-helpers.sh
+        ssh_retry -p ${{ inputs.ssh-port }} ${{ inputs.ssh-user }}@${{ inputs.ssh-host }} bash -s <<REMOTE
           set -euo pipefail
           cd ~/${{ inputs.deploy-path }}/releases
           TOTAL=\$(ls -1d */ 2>/dev/null | wc -l)

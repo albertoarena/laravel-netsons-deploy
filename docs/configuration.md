@@ -17,10 +17,16 @@ Choose between `ftp` (FTP upload) or `git` (server-side git clone). See [FTP Str
     'host' => env('NETSONS_SSH_HOST'),
     'port' => env('NETSONS_SSH_PORT', 65100),
     'user' => env('NETSONS_SSH_USER'),
+    'retries' => env('NETSONS_SSH_RETRIES', 3),
+    'retry_delay' => env('NETSONS_SSH_RETRY_DELAY', 10),
+    'connect_timeout' => env('NETSONS_SSH_CONNECT_TIMEOUT', 30),
 ],
 ```
 
 - **port** defaults to `65100` — the standard SSH port on Netsons shared hosting.
+- **retries** — maximum number of SSH connection retry attempts (default `3`). Only connection failures (exit code 255) are retried; remote command errors are not.
+- **retry_delay** — seconds to wait between retry attempts (default `10`).
+- **connect_timeout** — SSH connection timeout in seconds (default `30`). Replaces the system default (~2 minutes) to fail fast and retry sooner.
 - Both strategies require SSH access for server-side operations (symlinks, migrations, caches).
 
 ## PHP Binary

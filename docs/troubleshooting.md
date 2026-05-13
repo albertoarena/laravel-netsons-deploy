@@ -18,6 +18,31 @@ ssh -p 65100 user@server.netsons.com
 
 Ensure your `ssh-port` input or `SSH_PORT` variable is set to `65100`.
 
+### Intermittent SSH timeouts during deployment
+
+Shared hosting servers can occasionally be slow to accept SSH connections. Since **v1.10.0**, all SSH and SCP commands in the deploy workflow include automatic retry logic:
+
+- Up to **3 retries** (configurable via `ssh.retries` in config)
+- **10-second delay** between retries (configurable via `ssh.retry_delay`)
+- **30-second connection timeout** instead of the default ~2 minutes (configurable via `ssh.connect_timeout`)
+
+Only connection failures (SSH exit code 255) are retried. Remote command errors (e.g., a failed migration) are not retried.
+
+If you experience frequent timeouts, you can increase the retry count or delay in `config/netsons-deploy.php`:
+
+```php
+'ssh' => [
+    // ...
+    'retries' => 5,
+    'retry_delay' => 15,
+    'connect_timeout' => 45,
+],
+```
+
+Then regenerate the workflow: `php artisan netsons:install --force`
+
+Retries are visible in the GitHub Actions log as `::warning::` annotations.
+
 ### "Host key verification failed"
 
 Your `SSH_KNOWN_HOSTS` secret may be missing or incorrect. Regenerate it:

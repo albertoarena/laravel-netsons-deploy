@@ -23,6 +23,7 @@ Deploy Laravel applications to **Netsons shared hosting** (cPanel, SSD plans) vi
 - `.htaccess` management for root and public directories
 - Configurable FTP root path for different account setups
 - Configurable release retention (prune old releases)
+- SSH retry resilience (automatic retry on connection timeouts, configurable attempts/delay/timeout)
 - SSH cleanup after every deploy
 - Works with Netsons SSH (port 65100) and cPanel PHP (`ea-phpXX`)
 
@@ -150,7 +151,7 @@ php artisan netsons:install --force
 The config file `config/netsons-deploy.php` covers:
 
 - **Strategy** — `ftp` or `git`
-- **SSH** — host, port (default 65100), user
+- **SSH** — host, port (default 65100), user, retry settings (retries, delay, timeout)
 - **PHP binary** — remote path (default `/usr/local/bin/ea-php84`)
 - **Deploy path** — remote directory (default `public_html`)
 - **FTP** — host, port, user, password, protocol, root path

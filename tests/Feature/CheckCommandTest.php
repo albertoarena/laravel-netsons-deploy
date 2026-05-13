@@ -96,6 +96,24 @@ describe('netsons:check', function () {
             ->assertSuccessful();
     });
 
+    it('displays SSH retries setting', function () {
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('SSH Retries')
+            ->assertSuccessful();
+    });
+
+    it('displays SSH retry delay setting', function () {
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('SSH Retry Delay')
+            ->assertSuccessful();
+    });
+
+    it('displays SSH connect timeout setting', function () {
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('SSH Connect Timeout')
+            ->assertSuccessful();
+    });
+
     it('shows netsons-deploy.json status when file exists', function () {
         $jsonPath = base_path('netsons-deploy.json');
         File::put($jsonPath, json_encode([

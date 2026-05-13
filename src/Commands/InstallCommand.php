@@ -410,6 +410,11 @@ class InstallCommand extends Command
         $contents = str_replace('%%REMOTE_COMPOSER%%', $config['composer_binary'] ?? '/opt/cpanel/composer/bin/composer', $contents);
         $contents = str_replace('%%RELEASES_KEEP%%', (string) ($config['releases']['keep'] ?? 5), $contents);
 
+        // SSH retry settings
+        $contents = str_replace('%%SSH_RETRIES%%', (string) ($config['ssh']['retries'] ?? 3), $contents);
+        $contents = str_replace('%%SSH_RETRY_DELAY%%', (string) ($config['ssh']['retry_delay'] ?? 10), $contents);
+        $contents = str_replace('%%SSH_CONNECT_TIMEOUT%%', (string) ($config['ssh']['connect_timeout'] ?? 30), $contents);
+
         // FTP server-dir (W9)
         $ftpRootPath = $config['ftp']['root_path'] ?? '';
         $contents = str_replace('%%FTP_SERVER_DIR%%', $this->resolveFtpServerDir($ftpRootPath), $contents);
@@ -597,7 +602,8 @@ YAML;
           SSH_USER: ${{ secrets.SSH_USER }}
           DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
         run: |
-          scp -P ${SSH_PORT} \
+          source /tmp/ssh-helpers.sh
+          scp_retry -P ${SSH_PORT} \
             ${SSH_USER}@${SSH_HOST}:~/${{ vars.DEPLOY_PATH }}/shared/.env .env
           npx @albertoarena/envaudit check --ci --no-color
           rm .env
