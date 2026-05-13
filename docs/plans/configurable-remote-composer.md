@@ -44,3 +44,34 @@ Add a configurable `REMOTE_COMPOSER` path, defaulting to `/usr/local/bin/compose
 | `config/netsons-deploy.php` | Add `composer_binary` config key |
 | `src/Commands/InstallCommand.php` | Add Composer path prompt |
 | `tests/Feature/InstallCommandTest.php` | Assert `REMOTE_COMPOSER` in workflow |
+
+---
+
+## Update: Create bootstrap/cache before composer install (2026-05-13)
+
+### Problem
+
+After git clone, `composer install` triggers `post-autoload-dump` which runs `artisan package:discover`. This fails because `bootstrap/cache` doesn't exist in the freshly cloned repo (it's gitignored).
+
+```
+The bootstrap/cache directory must be present and writable.
+```
+
+The FTP strategy is unaffected because `bootstrap/cache` is created in the "Prepare Laravel directories" step on the runner before Composer runs.
+
+### Fix
+
+Add `mkdir -p bootstrap/cache` before `composer install` in the git deploy SSH command. This ensures the directory exists when Composer's post-install scripts run.
+
+```bash
+ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
+  "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && mkdir -p bootstrap/cache && ${REMOTE_PHP} ${REMOTE_COMPOSER} install ..."
+```
+
+### Files to change
+
+| File | Change |
+|---|---|
+| `stubs/workflows/deploy.yml.stub` | Add `mkdir -p bootstrap/cache` before `composer install` in git deploy step |
+| `action.yml` | Same |
+| `tests/Feature/InstallCommandTest.php` | Assert `mkdir -p bootstrap/cache` in git deploy step |

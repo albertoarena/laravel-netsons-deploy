@@ -206,7 +206,7 @@ runs:
 
         # Install Composer dependencies and cleanup
         ssh -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} \
-          "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && ${REMOTE_PHP} ${REMOTE_COMPOSER} install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
+          "cd ~/${DEPLOY_PATH}/releases/${RELEASE_DIR} && mkdir -p bootstrap/cache && ${REMOTE_PHP} ${REMOTE_COMPOSER} install --no-dev --no-interaction --prefer-dist --optimize-autoloader && rm -rf .git .github tests"
 
         # Upload built assets
         if [ -d "public/build" ]; then

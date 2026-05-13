@@ -588,6 +588,15 @@ describe('netsons:install workflow features', function () {
         expect($contents)->toContain('${REMOTE_COMPOSER} install');
     });
 
+    it('creates bootstrap/cache before composer install in git deploy step', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        // mkdir must be in the same SSH command line as composer install (git deploy step)
+        expect($contents)->toContain('mkdir -p bootstrap/cache && ${REMOTE_PHP} ${REMOTE_COMPOSER}');
+    });
+
     // B20: Root .htaccess uses RewriteCond to prevent loop
     it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
