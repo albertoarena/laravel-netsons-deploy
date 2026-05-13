@@ -182,42 +182,29 @@ This avoids all heredoc expansion issues. The env vars are expanded by bash on t
 
 ---
 
-## Update 3: `env:` block escapes slashes in vars (2026-05-13)
+## Update 3: GitHub Actions escapes slashes in ALL `${{ }}` expressions (2026-05-13)
 
 ### Problem
 
-The inline SSH commands (from Update 2) are now running, but git clone still fails with `ssh: Could not resolve hostname https`. The GitHub Actions log reveals the root cause definitively:
+Git clone still fails with `ssh: Could not resolve hostname https` even after moving `GIT_REPO` from `env:` block to inline script assignment.
+
+The log shows the `${{ vars.GIT_REPO }}` expression is escaped **even when used directly in the `run:` script**:
 
 ```
-GIT_REPO: https:\/\/github.com\/user\/repo.git
-CLONE_URL: https:\/\/github.com\/user\/repo.git
+Run GIT_REPO="https:\/\/github.com\/user\/repo.git"
 ```
 
-The `\/` is **real escaping, not log masking**. Proof:
-- `DEPLOY_PATH` shows `stage-***.***` (masked secret, no `\/`)
-- `GIT_BRANCH_VAL` shows `main` (no escaping)
-- `RELEASE_DIR` shows `20260512230901` (no escaping)
-- Only `CLONE_URL` has `\/` — because it flows from `GIT_REPO` which was set via the `env:` block from `${{ vars.GIT_REPO }}`
-
-GitHub Actions escapes forward slashes when `${{ vars.XXX }}` is placed in the `env:` block of a step. The `CLONE_URL` inherits the escaped value because the "Prepare clone URL" step reads `GIT_REPO` from its `env:` block.
-
-Git sees `https:\/\/github.com\/...`, can't parse it as HTTPS, falls back to SSH protocol, and tries to resolve hostname `https`.
+The `\/` is **real escaping, not log masking**. Proof: `SSH_AUTH_SOCK: /tmp/ssh-XXX/agent.2098` has normal slashes (it's set by the runner, not from a `${{ }}` expression).
 
 ### Root Cause
 
-In the "Prepare clone URL" step:
+GitHub Actions escapes forward slashes in ALL `${{ }}` expression substitutions — not just in `env:` blocks, but everywhere including `run:` scripts. Moving the expression from `env:` to `run:` doesn't help.
 
-```yaml
-env:
-  GIT_REPO: ${{ vars.GIT_REPO }}    # ← slashes get escaped here
-  GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
-run: |
-  echo "CLONE_URL=${GIT_REPO}" >> $GITHUB_ENV   # ← escaped value flows to CLONE_URL
-```
+The escaped `\/` makes the URL invalid for git, which falls back to SSH protocol and tries to resolve hostname `https`.
 
 ### Fix
 
-Remove `GIT_REPO` from the `env:` block. Use `${{ vars.GIT_REPO }}` directly in the `run:` script as a GitHub Actions expression, which does NOT escape slashes when substituted inline into the script text:
+Strip backslash escaping after expression substitution using `tr -d '\\'`:
 
 ```yaml
 - name: Prepare clone URL
@@ -225,7 +212,7 @@ Remove `GIT_REPO` from the `env:` block. Use `${{ vars.GIT_REPO }}` directly in 
   env:
     GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
   run: |
-    GIT_REPO="${{ vars.GIT_REPO }}"
+    GIT_REPO=$(echo "${{ vars.GIT_REPO }}" | tr -d '\\')
     if [ -n "${GIT_TOKEN}" ]; then
       echo "CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")" >> $GITHUB_ENV
     else
@@ -233,16 +220,14 @@ Remove `GIT_REPO` from the `env:` block. Use `${{ vars.GIT_REPO }}` directly in 
     fi
 ```
 
-Key insight: `${{ vars.XXX }}` in `env:` block → escapes slashes. `${{ vars.XXX }}` directly in `run:` script → raw substitution, no escaping.
+`tr -d '\\'` removes all backslash characters, turning `https:\/\/` back to `https://`. This is safe because valid git URLs never contain backslashes.
 
-`GIT_TOKEN` stays in the `env:` block because secrets should not be inlined in script text (and tokens don't contain slashes).
-
-The `action.yml` already uses `${{ inputs.git-repo }}` directly in `run:` (not via `env:`), so it may not have this issue, but should be updated for consistency.
+The `action.yml` also needs the same treatment for `${{ inputs.git-repo }}`, since action inputs may arrive pre-escaped if the calling workflow passes a `${{ vars.XXX }}` value.
 
 ### Files to change
 
 | File | Change |
 |---|---|
-| `stubs/workflows/deploy.yml.stub` | "Prepare clone URL" step: remove `GIT_REPO` from `env:`, use `${{ vars.GIT_REPO }}` directly in `run:` |
-| `action.yml` | Same pattern: ensure `git-repo` is not passed via `env:` block |
-| `tests/Feature/InstallCommandTest.php` | Update test assertions if needed |
+| `stubs/workflows/deploy.yml.stub` | Strip backslashes from `${{ vars.GIT_REPO }}` with `tr -d '\\'` |
+| `action.yml` | Strip backslashes from `${{ inputs.git-repo }}` with `tr -d '\\'` |
+| `tests/Feature/InstallCommandTest.php` | Update test assertion for new `tr -d` pattern |

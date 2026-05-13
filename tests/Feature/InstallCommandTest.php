@@ -500,8 +500,9 @@ describe('netsons:install workflow features', function () {
         // GIT_REPO must NOT be in the env: block (GitHub Actions escapes slashes there)
         expect($contents)->not->toMatch('/env:\s*\n\s+GIT_REPO:/');
 
-        // Instead, vars.GIT_REPO must be used directly in the run: script
-        expect($contents)->toContain('GIT_REPO="${{ vars.GIT_REPO }}"');
+        // vars.GIT_REPO must be used in run: script with backslash stripping
+        expect($contents)->toContain("tr -d '\\\\'");
+        expect($contents)->toContain('vars.GIT_REPO');
     });
 
     it('uses CLONE_URL env var in git deploy step', function () {

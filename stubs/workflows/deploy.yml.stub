@@ -193,7 +193,7 @@ jobs:
         env:
           GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
         run: |
-          GIT_REPO="${{ vars.GIT_REPO }}"
+          GIT_REPO=$(echo "${{ vars.GIT_REPO }}" | tr -d '\\')
           if [ -n "${GIT_TOKEN}" ]; then
             echo "CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")" >> $GITHUB_ENV
           else

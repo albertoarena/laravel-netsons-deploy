@@ -176,10 +176,11 @@ runs:
       env:
         GIT_TOKEN: ${{ inputs.git-token }}
       run: |
+        GIT_REPO=$(echo "${{ inputs.git-repo }}" | tr -d '\\')
         if [ -n "${GIT_TOKEN}" ]; then
-          echo "CLONE_URL=$(echo "${{ inputs.git-repo }}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")" >> $GITHUB_ENV
+          echo "CLONE_URL=$(echo "${GIT_REPO}" | sed "s|https://github.com/|https://x-access-token:${GIT_TOKEN}@github.com/|")" >> $GITHUB_ENV
         else
-          echo "CLONE_URL=${{ inputs.git-repo }}" >> $GITHUB_ENV
+          echo "CLONE_URL=${GIT_REPO}" >> $GITHUB_ENV
         fi
 
     # ── Deploy (Git) ──────────────────────────────────────────────────────
