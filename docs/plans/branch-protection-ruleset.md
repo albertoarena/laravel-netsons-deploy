@@ -1,5 +1,7 @@
 # Plan: Branch Protection Ruleset for `main`
 
+**Status: COMPLETED** (2026-05-14)
+
 ## Goal
 
 Protect the `main` branch of `albertoarena/laravel-netsons-deploy` so that:
@@ -10,11 +12,13 @@ Protect the `main` branch of `albertoarena/laravel-netsons-deploy` so that:
 
 ## Steps
 
-### Step 1: Create CI workflow (`.github/workflows/ci.yml`)
+### Step 1: Create CI workflow (`.github/workflows/ci.yml`) — DONE
 
 A new GitHub Actions workflow that runs tests and linting on every push to `main` and on every PR targeting `main`.
 
 **File:** `.github/workflows/ci.yml`
+**Commit:** `7a601ca` — pushed to `main`
+**First run:** All 3 jobs passed (PHP 8.2, 8.3, 8.4)
 
 ```yaml
 name: CI
@@ -59,13 +63,16 @@ jobs:
 
 **Why this matrix:** The package supports PHP 8.2+ (per `composer.json`), so we test all supported versions.
 
-**Job names** produced by the matrix: `PHP 8.2`, `PHP 8.3`, `PHP 8.4` — these are the status check context names needed in Step 2.
+**Job names** produced by the matrix: `PHP 8.2`, `PHP 8.3`, `PHP 8.4` — these are the status check context names used in Step 2.
 
 ---
 
-### Step 2: Create branch ruleset via GitHub API
+### Step 2: Create branch ruleset via GitHub API — DONE
 
-**Command:**
+**Ruleset ID:** `16381035`
+**URL:** https://github.com/albertoarena/laravel-netsons-deploy/rules/16381035
+
+**Command used:**
 
 ```bash
 gh api repos/albertoarena/laravel-netsons-deploy/rulesets \
@@ -102,8 +109,7 @@ gh api repos/albertoarena/laravel-netsons-deploy/rulesets \
         "dismiss_stale_reviews_on_push": true,
         "require_code_owner_review": false,
         "require_last_push_approval": false,
-        "required_review_thread_resolution": false,
-        "automatic_copilot_code_review_enabled": false
+        "required_review_thread_resolution": false
       }
     },
     {
@@ -122,6 +128,8 @@ gh api repos/albertoarena/laravel-netsons-deploy/rulesets \
 EOF
 ```
 
+**Note:** The `automatic_copilot_code_review_enabled` parameter was removed — it is not supported on free/public repos and causes a 422 validation error.
+
 **What each section does:**
 
 | Field | Purpose |
@@ -137,36 +145,32 @@ EOF
 
 ---
 
-### Step 3: Verify the ruleset
+### Step 3: Verify — DONE
 
-```bash
-gh api repos/albertoarena/laravel-netsons-deploy/rulesets
-```
-
-This lists all rulesets to confirm it was created correctly.
+- Ruleset is active and visible in Settings > Rulesets
+- CI workflow ran successfully on first push (all 3 PHP versions passed)
 
 ---
 
-## Order of Operations
-
-1. **First** create and push the CI workflow file — the status checks won't exist in GitHub until the workflow has run at least once
-2. **Then** create the ruleset — GitHub will accept the check names even before they've run, but they won't be enforceable until the workflow exists
-3. **Verify** the ruleset is active
-
 ## Rollback
 
-To delete the ruleset if something goes wrong:
+To delete the ruleset if needed:
 
 ```bash
-# List rulesets to find the ID
-gh api repos/albertoarena/laravel-netsons-deploy/rulesets
+gh api repos/albertoarena/laravel-netsons-deploy/rulesets/16381035 --method DELETE
+```
 
-# Delete by ID
-gh api repos/albertoarena/laravel-netsons-deploy/rulesets/{RULESET_ID} --method DELETE
+To update the ruleset:
+
+```bash
+gh api repos/albertoarena/laravel-netsons-deploy/rulesets/16381035 \
+  --method PUT \
+  --input - <<'EOF'
+{ ... updated JSON ... }
+EOF
 ```
 
 ## Notes
 
-- The CI workflow file I already created at `.github/workflows/ci.yml` needs to be reverted and recreated cleanly as part of this plan
 - No CODEOWNERS file is included in this plan (can be added later if desired)
 - The `deploy-docs.yml` workflow is not included as a required check since it only runs on `website/**` path changes
