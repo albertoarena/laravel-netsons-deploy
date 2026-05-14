@@ -107,8 +107,11 @@ class DeployConfigManager
         ];
 
         // Keys already handled by the workflow, as secrets, or internal
+        // Note: MAIL_ is NOT excluded — MAIL_USERNAME/MAIL_PASSWORD are caught
+        // by $secretPatterns above, other MAIL_* keys (MAIL_SCHEME, MAIL_MAILER,
+        // MAIL_HOST) are valid static candidates.
         $excludePrefixes = [
-            'APP_', 'DB_', 'MAIL_', 'REDIS_', 'AWS_',
+            'APP_', 'DB_', 'REDIS_', 'AWS_',
             'LOG_', 'BROADCAST_', 'FILESYSTEM_', 'QUEUE_', 'CACHE_',
         ];
 

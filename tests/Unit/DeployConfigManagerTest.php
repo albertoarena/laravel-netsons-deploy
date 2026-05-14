@@ -535,17 +535,49 @@ describe('parseEnvExample', function () {
         expect($result['build'])->toBe([]);
     });
 
-    it('excludes DB_* MAIL_* REDIS_* prefixes from static detection', function () {
+    it('excludes DB_* REDIS_* prefixes from static detection', function () {
         $envFile = $this->tempDir.'/.env.example';
         file_put_contents($envFile, implode("\n", [
             'DB_CONNECTION=mysql',
-            'MAIL_MAILER=smtp',
             'REDIS_HOST=127.0.0.1',
         ]));
 
         $result = DeployConfigManager::parseEnvExample($envFile);
 
         expect($result['static'])->toBe([]);
+    });
+
+    it('detects MAIL_MAILER and MAIL_SCHEME as static variables', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'MAIL_MAILER=smtp',
+            'MAIL_SCHEME=smtps',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['static'])->toBe([
+            'MAIL_MAILER' => 'smtp',
+            'MAIL_SCHEME' => 'smtps',
+        ]);
+    });
+
+    it('still detects MAIL_USERNAME and MAIL_PASSWORD as secret-backed', function () {
+        $envFile = $this->tempDir.'/.env.example';
+        file_put_contents($envFile, implode("\n", [
+            'MAIL_MAILER=smtp',
+            'MAIL_SCHEME=smtps',
+            'MAIL_HOST=mailpit',
+            'MAIL_USERNAME=null',
+            'MAIL_PASSWORD=null',
+        ]));
+
+        $result = DeployConfigManager::parseEnvExample($envFile);
+
+        expect($result['secret'])->toContain('MAIL_USERNAME');
+        expect($result['secret'])->toContain('MAIL_PASSWORD');
+        expect($result['secret'])->not->toContain('MAIL_MAILER');
+        expect($result['secret'])->not->toContain('MAIL_SCHEME');
     });
 
     it('detects AWS keys as secret-backed', function () {

@@ -186,7 +186,7 @@ The `netsons-deploy.json` file in your project root stores additional deployment
 
 During `netsons:install`, the installer auto-detects variables from your `.env.example`:
 - **Secret-backed** — `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `REDIS_PASSWORD`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`
-- **Static** — any key with a non-placeholder value, excluding `APP_*`, `DB_*`, `MAIL_*`, `REDIS_*`, `AWS_*`, `VITE_*`, `LOG_*`, `CACHE_*` prefixes and placeholder values (empty, `null`, booleans, localhost, numeric ports)
+- **Static** — any key with a non-placeholder value, excluding `APP_*`, `DB_*`, `REDIS_*`, `AWS_*`, `VITE_*`, `LOG_*`, `CACHE_*` prefixes and placeholder values (empty, `null`, booleans, localhost, numeric ports). `MAIL_*` keys like `MAIL_SCHEME` and `MAIL_MAILER` are detected as static; only `MAIL_USERNAME` and `MAIL_PASSWORD` are secret-backed.
 
 Static values can be edited after selection (e.g., change `SESSION_DRIVER` from `file` to `database`).
 
