@@ -25,9 +25,9 @@ php artisan netsons:install [--strategy=ftp|git] [--force]
 
 1. Publishes `config/netsons-deploy.php` with the selected strategy
 2. Auto-detects env variables from `.env.example`:
-   - **Secret-backed** (DB_DATABASE, DB_PASSWORD, MAIL_*, REDIS_PASSWORD, AWS_*) — presented via multiselect
-   - **Static** (SESSION_DRIVER, LARAVEL_PDF_DRIVER, any project-specific key with a non-placeholder value) — presented via multiselect, then each value can be edited
-3. Prompts for build env vars, custom commands, Slack notifications, and envaudit
+   - **Secret-backed** (DB_DATABASE, DB_USERNAME, DB_PASSWORD, MAIL_USERNAME, MAIL_PASSWORD, REDIS_PASSWORD, AWS_*) — presented via multiselect
+   - **Static** (MAIL_SCHEME, MAIL_MAILER, SESSION_DRIVER, LARAVEL_PDF_DRIVER, any project-specific key with a non-placeholder value) — presented via multiselect, then each value can be edited
+3. Prompts for build env vars, custom commands, seeders, Slack notifications, and envaudit
 4. Generates `.github/workflows/deploy.yml` with all placeholders replaced
 5. Displays required GitHub Secrets for the chosen strategy
 6. Displays required GitHub Variables

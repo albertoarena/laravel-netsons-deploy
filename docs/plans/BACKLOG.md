@@ -532,7 +532,7 @@ Keys to **exclude** from static suggestions (already handled elsewhere or struct
 |---|---|
 | `APP_*` | Already set by workflow (APP_ENV, APP_DEBUG, APP_URL) |
 | `DB_*` | Handled as secret-backed variables |
-| `MAIL_*` | Handled as secret-backed variables |
+| `MAIL_USERNAME`, `MAIL_PASSWORD` | Handled as secret-backed variables (other `MAIL_*` keys detected as static) |
 | `REDIS_*` | Handled as secret-backed variables |
 | `AWS_*` | Handled as secret-backed variables |
 | `LOG_*`, `BROADCAST_*`, `FILESYSTEM_*`, `QUEUE_*`, `CACHE_*` | Infrastructure defaults, rarely need overriding |
