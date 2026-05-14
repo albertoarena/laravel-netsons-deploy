@@ -678,6 +678,41 @@ describe('netsons:install workflow features', function () {
         expect($contents)->not->toContain('%%SSH_CONNECT_TIMEOUT%%');
     });
 
+    // First deployment: seeders from netsons-deploy.json
+    it('includes seeders from netsons-deploy.json in generated workflow', function () {
+        File::put($this->jsonPath, json_encode([
+            'seeders' => ['RoleSeeder', 'PermissionSeeder'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('db:seed --class=RoleSeeder --force');
+        expect($contents)->toContain('db:seed --class=PermissionSeeder --force');
+    });
+
+    it('generates clean workflow without seeders when none configured in JSON', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('Run seeders on first deploy');
+        expect($contents)->not->toContain('db:seed --class=');
+    });
+
+    it('prefers seeders from netsons-deploy.json over config', function () {
+        File::put($this->jsonPath, json_encode([
+            'seeders' => ['JsonSeeder'],
+        ]));
+
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true, '--force' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain('db:seed --class=JsonSeeder --force');
+    });
+
     // B20: Root .htaccess uses RewriteCond to prevent loop
     it('generates root htaccess with RewriteCond to prevent rewrite loop', function () {
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])

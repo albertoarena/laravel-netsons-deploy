@@ -161,12 +161,22 @@ Toggle individual post-deploy steps. All are enabled by default. The workflow al
 
 ```php
 'seeders' => [
-    // 'RoleSeeder',
-    // 'PermissionSeeder',
+    // 'DatabaseSeeder',
 ],
 ```
 
 Seeder classes to run on the **first deploy only**. A `.first_deploy` flag file is created on initial setup and removed after seeders run.
+
+Seeders can also be configured interactively during `netsons:install` and stored in `netsons-deploy.json`. When both are set, `netsons-deploy.json` takes precedence.
+
+During install, the command auto-detects seeders from your `composer.json`:
+
+| Package | Suggested seeders |
+|---------|-------------------|
+| *(always)* | `DatabaseSeeder` |
+| `spatie/laravel-permission` | `RoleSeeder`, `PermissionSeeder` |
+
+Detected seeders are shown in a multiselect. You can also add custom seeders manually.
 
 ---
 
@@ -200,6 +210,9 @@ When reconfiguring, the JSON is reset to defaults before collecting new values.
     },
     "custom_commands": [
         "event-sourcing:cache-event-handlers 2>/dev/null || true"
+    ],
+    "seeders": [
+        "DatabaseSeeder"
     ],
     "notifications": {
         "slack_webhook_secret": "SLACK_WEBHOOK_DEBUG"

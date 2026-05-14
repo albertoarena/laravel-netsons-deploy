@@ -110,6 +110,14 @@ class CheckCommand extends Command
             }
         }
 
+        if (! empty($data['seeders'])) {
+            foreach ($data['seeders'] as $seeder) {
+                $rows[] = ['Seeder', $seeder, 'First deploy only'];
+            }
+        } else {
+            $rows[] = ['Seeder', 'No seeders configured', ''];
+        }
+
         if (! empty($data['custom_commands'])) {
             foreach ($data['custom_commands'] as $command) {
                 $rows[] = ['Command', 'artisan '.$command, ''];

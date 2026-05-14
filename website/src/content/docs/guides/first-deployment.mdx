@@ -1,0 +1,150 @@
+---
+title: First Deployment
+description: How the first deployment works and how to configure seeders
+---
+
+The deploy workflow uses a `.first_deploy` sentinel file to detect the very first deployment and run one-time setup steps automatically.
+
+## How it works
+
+On every deployment, the workflow checks whether `shared/.env` exists on the server. If it does not, this is a first deployment and three one-time steps are triggered:
+
+### 1. Shared resources setup
+
+When `shared/.env` does not exist, the workflow:
+
+- Copies `.env.example` from the release into `shared/.env`
+- Creates a `.first_deploy` marker file at the deploy root
+
+### 2. App key generation
+
+If `.first_deploy` exists, the workflow runs:
+
+```bash
+php artisan key:generate --force
+```
+
+This sets `APP_KEY` in `shared/.env` so the application can encrypt sessions, cookies, and other data.
+
+### 3. Database seeders
+
+If `.first_deploy` exists and seeders are configured, the workflow runs each seeder class and then removes the marker file:
+
+```bash
+php artisan db:seed --class=DatabaseSeeder --force
+rm ~/.first_deploy
+```
+
+On every subsequent deployment the marker is absent, so the seeder step is skipped.
+
+## Configuring seeders
+
+Seeders are configured during `php artisan netsons:install`. When prompted:
+
+```
+Configure seeders for the first deployment? (yes/no) [no]:
+```
+
+Answer **yes** and you'll see a multiselect with detected seeders:
+
+```
+Select seeders to run on first deployment:
+  [x] DatabaseSeeder
+```
+
+`DatabaseSeeder` is always suggested. If your project uses **spatie/laravel-permission**, the installer auto-detects it and adds additional suggestions:
+
+```
+Select seeders to run on first deployment:
+  [x] DatabaseSeeder
+  [x] RoleSeeder
+  [x] PermissionSeeder
+```
+
+Use **Space** to toggle items and **Enter** to confirm.
+
+After the multiselect, you can add more seeders manually if needed.
+
+Seeders are stored in `netsons-deploy.json`:
+
+```json
+{
+    "seeders": [
+        "DatabaseSeeder"
+    ]
+}
+```
+
+You can also add seeders to `config/netsons-deploy.php` directly:
+
+```php
+'seeders' => [
+    'DatabaseSeeder',
+],
+```
+
+### Namespaced seeders
+
+Fully qualified class names are supported when adding seeders manually:
+
+```
+Seeder class name: Database\Seeders\CustomSeeder
+```
+
+### Checking configured seeders
+
+Run `php artisan netsons:check` to see which seeders are configured:
+
+```
+Deploy Config (netsons-deploy.json):
+ ┌────────┬────────────────┬──────────────────┐
+ │ Type   │ Key            │ Value/Source      │
+ ├────────┼────────────────┼──────────────────┤
+ │ Seeder │ DatabaseSeeder │ First deploy only │
+ └────────┴────────────────┴──────────────────┘
+```
+
+## Supported package detection
+
+The installer checks your `composer.json` (both `require` and `require-dev`) and suggests seeders for known packages:
+
+| Package | Suggested seeders |
+|---------|-------------------|
+| *(always)* | `DatabaseSeeder` |
+| `spatie/laravel-permission` | `RoleSeeder`, `PermissionSeeder` |
+
+## Re-running seeders manually
+
+If you need to re-seed after the first deployment (for example, after a database reset), SSH into the server and run:
+
+```bash
+cd ~/DEPLOY_PATH/current
+/usr/local/bin/ea-php84 artisan db:seed --force --no-interaction
+```
+
+Replace `DEPLOY_PATH` and the PHP path with the values from your workflow configuration.
+
+To run a specific seeder:
+
+```bash
+/usr/local/bin/ea-php84 artisan db:seed --class=DatabaseSeeder --force
+```
+
+## Troubleshooting
+
+### Seeders didn't run on first deploy
+
+Check that:
+1. Seeders are listed in `netsons-deploy.json` (under `"seeders"`) or `config/netsons-deploy.php`
+2. The workflow was regenerated after adding seeders (`php artisan netsons:install --force`)
+3. The `.first_deploy` marker file was created (only happens when `shared/.env` doesn't exist)
+
+### Need to re-run seeders
+
+The `.first_deploy` file is removed after seeders complete. To trigger them again:
+
+1. SSH into the server
+2. Create the marker: `touch ~/DEPLOY_PATH/.first_deploy`
+3. Trigger a new deployment
+
+Or run the seeder manually via SSH as shown above.

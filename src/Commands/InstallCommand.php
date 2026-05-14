@@ -183,6 +183,17 @@ class InstallCommand extends Command
             $manager->setSlackWebhook($secretName);
         }
 
+        // Seeders — first-deploy only
+        $existingSeeders = $existingConfig['seeders'] ?? [];
+        if (confirm('Configure seeders for the first deployment?', false)) {
+            $this->collectSeeders($manager, $existingSeeders);
+        } elseif (! empty($existingSeeders)) {
+            foreach ($existingSeeders as $seeder) {
+                $manager->addSeeder($seeder);
+            }
+            info('Restored '.count($existingSeeders).' seeder(s) from previous config.');
+        }
+
         // Envaudit — use existing value as default
         $existingEnvaudit = $existingConfig['envaudit'] ?? true;
         $enableEnvaudit = confirm(
@@ -359,6 +370,68 @@ class InstallCommand extends Command
         } while (confirm('Add another build variable?', false));
     }
 
+    protected function collectSeeders(DeployConfigManager $manager, array $existingSeeders = []): void
+    {
+        $composerJsonPath = base_path('composer.json');
+        $detected = DeployConfigManager::detectSeeders($composerJsonPath);
+
+        // Merge detected with any previously configured seeders not in the detected list
+        $allOptions = $detected;
+        foreach ($existingSeeders as $seeder) {
+            if (! in_array($seeder, $allOptions, true)) {
+                $allOptions[] = $seeder;
+            }
+        }
+
+        $options = [];
+        foreach ($allOptions as $seeder) {
+            $options[$seeder] = $seeder;
+        }
+
+        // Default selection: existing seeders if reconfiguring, otherwise all detected
+        $defaults = ! empty($existingSeeders) ? $existingSeeders : $detected;
+
+        $selected = multiselect(
+            label: 'Select seeders to run on first deployment',
+            options: $options,
+            default: $defaults,
+            hint: 'Space to toggle, Enter to confirm',
+        );
+
+        foreach ($selected as $seeder) {
+            $manager->addSeeder($seeder);
+        }
+
+        if (! empty($selected)) {
+            info('Added '.count($selected).' seeder(s).');
+        }
+
+        // Allow manual additions
+        if (confirm('Add additional seeders manually?', false)) {
+            $this->collectManualSeeders($manager);
+        }
+    }
+
+    protected function collectManualSeeders(DeployConfigManager $manager): void
+    {
+        do {
+            $seeder = text('Seeder class name');
+
+            if ($seeder === '') {
+                break;
+            }
+
+            if (! preg_match('/^[A-Za-z_\\\\][A-Za-z0-9_\\\\]*$/', $seeder)) {
+                warning("\"{$seeder}\" is not a valid PHP class name. Skipping.");
+
+                continue;
+            }
+
+            $manager->addSeeder($seeder);
+            info("Added seeder: {$seeder}");
+        } while (confirm('Add another seeder?', false));
+    }
+
     protected function collectCustomCommands(DeployConfigManager $manager): void
     {
         note("Common commands:\n  - event-sourcing:cache-event-handlers 2>/dev/null || true\n  - permission:cache-reset\n  - horizon:terminate");
@@ -434,8 +507,8 @@ class InstallCommand extends Command
             $contents
         );
 
-        // Seeders (W4)
-        $seeders = $config['seeders'] ?? [];
+        // Seeders (W4) — prefer JSON, fallback to config
+        $seeders = ! empty($deployConfig['seeders']) ? $deployConfig['seeders'] : ($config['seeders'] ?? []);
         $contents = str_replace('%%SEEDERS%%', $this->generateSeedersBlock($seeders), $contents);
 
         // Custom commands (W6)

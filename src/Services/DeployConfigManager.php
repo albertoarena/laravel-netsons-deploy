@@ -11,6 +11,7 @@ class DeployConfigManager
         'env_static' => [],
         'build_env' => [],
         'custom_commands' => [],
+        'seeders' => [],
         'notifications' => [],
         'envaudit' => false,
     ];
@@ -47,6 +48,39 @@ class DeployConfigManager
             $this->jsonPath,
             json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)."\n"
         );
+    }
+
+    /**
+     * Detect suggested seeders based on installed packages.
+     *
+     * Always includes DatabaseSeeder. Adds package-specific seeders
+     * when known packages (e.g. spatie/laravel-permission) are detected
+     * in composer.json require or require-dev.
+     *
+     * @return list<string>
+     */
+    public static function detectSeeders(string $composerJsonPath): array
+    {
+        $seeders = ['DatabaseSeeder'];
+
+        if (! file_exists($composerJsonPath)) {
+            return $seeders;
+        }
+
+        $content = file_get_contents($composerJsonPath);
+        $composer = json_decode($content, true) ?? [];
+
+        $packages = array_merge(
+            array_keys($composer['require'] ?? []),
+            array_keys($composer['require-dev'] ?? []),
+        );
+
+        if (in_array('spatie/laravel-permission', $packages, true)) {
+            $seeders[] = 'RoleSeeder';
+            $seeders[] = 'PermissionSeeder';
+        }
+
+        return $seeders;
     }
 
     /**
@@ -202,6 +236,26 @@ class DeployConfigManager
     {
         $data = $this->read();
         unset($data['build_env'][$key]);
+        $this->write($data);
+    }
+
+    public function addSeeder(string $seeder): void
+    {
+        $data = $this->read();
+
+        if (! in_array($seeder, $data['seeders'], true)) {
+            $data['seeders'][] = $seeder;
+        }
+
+        $this->write($data);
+    }
+
+    public function removeSeeder(string $seeder): void
+    {
+        $data = $this->read();
+        $data['seeders'] = array_values(
+            array_filter($data['seeders'], fn (string $s) => $s !== $seeder)
+        );
         $this->write($data);
     }
 

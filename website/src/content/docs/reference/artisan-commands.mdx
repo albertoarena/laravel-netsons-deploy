@@ -47,7 +47,7 @@ The installer creates `.github/workflows/deploy.yml` from a stub template, repla
 - `%%BUILD_ENV%%` — build environment variables from `netsons-deploy.json`
 - `%%ENV_MAPPING_ENV_BLOCK%%` — secret references from `netsons-deploy.json`
 - `%%ENV_MAPPING_SED_BLOCK%%` — sed commands for env updates
-- `%%SEEDERS%%` — first-deploy seeder commands from config
+- `%%SEEDERS%%` — first-deploy seeder commands from `netsons-deploy.json` (or config fallback)
 - `%%CUSTOM_COMMANDS%%` — custom artisan commands from `netsons-deploy.json`
 - `%%NOTIFICATIONS%%` — Slack notification steps from `netsons-deploy.json`
 - `%%ENVAUDIT%%` — envaudit validation step from `netsons-deploy.json`

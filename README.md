@@ -13,7 +13,7 @@ Deploy Laravel applications to **Netsons shared hosting** (cPanel, SSD plans) vi
 - Shared `.env` and `storage/` across releases
 - Automatic cache clearing and rebuilding (with dependency caching for faster builds)
 - Database migrations on deploy
-- Automatic `key:generate` and seeder support on first deploy
+- Automatic `key:generate` and seeder support on first deploy (auto-detects `spatie/laravel-permission`)
 - Auto-detect env variables from `.env.example` (secret-backed and static, with editable values)
 - Custom `.env` variable management (secret-backed and static values)
 - Build environment variables (e.g., Vite config)
@@ -166,6 +166,7 @@ The `netsons-deploy.json` file manages:
 - **Static env vars** — fixed values per deployment
 - **Build env vars** — available during asset build
 - **Custom commands** — extra artisan commands for post-deploy
+- **Seeders** — classes to run on first deploy only (auto-detected from `composer.json`)
 - **Notifications** — Slack webhook for deploy alerts
 
 See [Configuration Reference](docs/configuration.md) for details.

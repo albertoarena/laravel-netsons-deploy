@@ -233,8 +233,7 @@ return [
 
     // First-deploy seeders (run once on first deploy)
     'seeders' => [
-        // 'RoleSeeder',
-        // 'PermissionSeeder',
+        // 'DatabaseSeeder',
     ],
 ];
 ```

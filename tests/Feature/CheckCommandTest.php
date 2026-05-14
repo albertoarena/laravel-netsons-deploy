@@ -129,4 +129,44 @@ describe('netsons:check', function () {
 
         File::delete($jsonPath);
     });
+
+    it('displays configured seeders from netsons-deploy.json', function () {
+        $jsonPath = base_path('netsons-deploy.json');
+        File::put($jsonPath, json_encode([
+            'seeders' => ['RoleSeeder', 'PermissionSeeder'],
+        ]));
+
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('RoleSeeder')
+            ->assertSuccessful();
+
+        File::delete($jsonPath);
+    });
+
+    it('displays multiple seeders from netsons-deploy.json', function () {
+        $jsonPath = base_path('netsons-deploy.json');
+        File::put($jsonPath, json_encode([
+            'seeders' => ['RoleSeeder', 'PermissionSeeder'],
+        ]));
+
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('RoleSeeder')
+            ->doesntExpectOutputToContain('No seeders configured')
+            ->assertSuccessful();
+
+        File::delete($jsonPath);
+    });
+
+    it('shows no seeders configured when seeders list is empty', function () {
+        $jsonPath = base_path('netsons-deploy.json');
+        File::put($jsonPath, json_encode([
+            'seeders' => [],
+        ]));
+
+        $this->artisan('netsons:check')
+            ->expectsOutputToContain('No seeders configured')
+            ->assertSuccessful();
+
+        File::delete($jsonPath);
+    });
 });

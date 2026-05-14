@@ -34,6 +34,12 @@ export default defineConfig({
           ],
         },
         {
+          label: 'Guides',
+          items: [
+            { label: 'First Deployment', link: '/guides/first-deployment/' },
+          ],
+        },
+        {
           label: 'Strategies',
           items: [
             { label: 'FTP Strategy', link: '/strategies/ftp/' },

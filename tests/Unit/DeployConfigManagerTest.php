@@ -39,6 +39,7 @@ describe('read', function () {
         expect($data['build_env'])->toBe([]);
         expect($data['custom_commands'])->toBe([]);
         expect($data['notifications'])->toBe([]);
+        expect($data['seeders'])->toBe([]);
     });
 
     it('reads existing JSON file', function () {
@@ -590,6 +591,152 @@ describe('envaudit', function () {
 
         $data = $this->manager->read();
         expect($data['envaudit'])->toBeFalse();
+    });
+});
+
+describe('seeders', function () {
+    it('defaults seeders to empty array', function () {
+        $data = $this->manager->read();
+
+        expect($data['seeders'])->toBe([]);
+    });
+
+    it('reads seeders when set', function () {
+        file_put_contents($this->jsonPath, json_encode([
+            'seeders' => ['RoleSeeder', 'PermissionSeeder'],
+        ]));
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['RoleSeeder', 'PermissionSeeder']);
+    });
+
+    it('adds a seeder', function () {
+        $this->manager->addSeeder('RoleSeeder');
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['RoleSeeder']);
+    });
+
+    it('appends to existing seeders', function () {
+        $this->manager->addSeeder('RoleSeeder');
+        $this->manager->addSeeder('PermissionSeeder');
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['RoleSeeder', 'PermissionSeeder']);
+    });
+
+    it('does not add duplicate seeders', function () {
+        $this->manager->addSeeder('RoleSeeder');
+        $this->manager->addSeeder('RoleSeeder');
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['RoleSeeder']);
+    });
+
+    it('removes a seeder', function () {
+        $this->manager->addSeeder('RoleSeeder');
+        $this->manager->addSeeder('PermissionSeeder');
+        $this->manager->removeSeeder('RoleSeeder');
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['PermissionSeeder']);
+    });
+
+    it('does nothing when removing nonexistent seeder', function () {
+        $this->manager->addSeeder('RoleSeeder');
+        $this->manager->removeSeeder('NonexistentSeeder');
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['RoleSeeder']);
+    });
+
+    it('adds namespaced seeder class', function () {
+        $this->manager->addSeeder('Database\\Seeders\\RoleSeeder');
+
+        $data = $this->manager->read();
+        expect($data['seeders'])->toBe(['Database\\Seeders\\RoleSeeder']);
+    });
+});
+
+describe('detectSeeders', function () {
+    it('always suggests DatabaseSeeder', function () {
+        $composerJsonPath = $this->tempDir.'/composer.json';
+        file_put_contents($composerJsonPath, json_encode([
+            'require' => [
+                'laravel/framework' => '^11.0',
+            ],
+        ]));
+
+        $result = DeployConfigManager::detectSeeders($composerJsonPath);
+
+        expect($result)->toContain('DatabaseSeeder');
+    });
+
+    it('suggests RoleSeeder and PermissionSeeder when spatie/laravel-permission is installed', function () {
+        $composerJsonPath = $this->tempDir.'/composer.json';
+        file_put_contents($composerJsonPath, json_encode([
+            'require' => [
+                'laravel/framework' => '^11.0',
+                'spatie/laravel-permission' => '^6.0',
+            ],
+        ]));
+
+        $result = DeployConfigManager::detectSeeders($composerJsonPath);
+
+        expect($result)->toContain('DatabaseSeeder');
+        expect($result)->toContain('RoleSeeder');
+        expect($result)->toContain('PermissionSeeder');
+    });
+
+    it('does not suggest Spatie seeders when package is not installed', function () {
+        $composerJsonPath = $this->tempDir.'/composer.json';
+        file_put_contents($composerJsonPath, json_encode([
+            'require' => [
+                'laravel/framework' => '^11.0',
+            ],
+        ]));
+
+        $result = DeployConfigManager::detectSeeders($composerJsonPath);
+
+        expect($result)->not->toContain('RoleSeeder');
+        expect($result)->not->toContain('PermissionSeeder');
+    });
+
+    it('returns only DatabaseSeeder when composer.json does not exist', function () {
+        $result = DeployConfigManager::detectSeeders('/nonexistent/composer.json');
+
+        expect($result)->toBe(['DatabaseSeeder']);
+    });
+
+    it('detects spatie/laravel-permission in require-dev', function () {
+        $composerJsonPath = $this->tempDir.'/composer.json';
+        file_put_contents($composerJsonPath, json_encode([
+            'require' => [
+                'laravel/framework' => '^11.0',
+            ],
+            'require-dev' => [
+                'spatie/laravel-permission' => '^6.0',
+            ],
+        ]));
+
+        $result = DeployConfigManager::detectSeeders($composerJsonPath);
+
+        expect($result)->toContain('RoleSeeder');
+        expect($result)->toContain('PermissionSeeder');
+    });
+
+    it('returns DatabaseSeeder first in the list', function () {
+        $composerJsonPath = $this->tempDir.'/composer.json';
+        file_put_contents($composerJsonPath, json_encode([
+            'require' => [
+                'laravel/framework' => '^11.0',
+                'spatie/laravel-permission' => '^6.0',
+            ],
+        ]));
+
+        $result = DeployConfigManager::detectSeeders($composerJsonPath);
+
+        expect($result[0])->toBe('DatabaseSeeder');
     });
 });
 
