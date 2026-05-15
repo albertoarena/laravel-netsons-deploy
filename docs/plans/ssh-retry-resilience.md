@@ -51,9 +51,7 @@ ssh_retry() {
   local attempt=1
 
   while [ $attempt -le $max_attempts ]; do
-    if ssh_with_opts "$@"; then
-      return 0
-    fi
+    ssh_with_opts "$@" && return 0
     local exit_code=$?
     if [ $exit_code -ne 255 ]; then
       # Non-connection error (e.g., remote command failed) — don't retry
@@ -74,9 +72,7 @@ scp_retry() {
   local attempt=1
 
   while [ $attempt -le $max_attempts ]; do
-    if scp -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-30} "$@"; then
-      return 0
-    fi
+    scp -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-30} "$@" && return 0
     local exit_code=$?
     if [ $exit_code -ne 255 ]; then
       return $exit_code

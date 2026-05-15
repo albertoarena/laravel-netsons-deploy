@@ -148,9 +148,7 @@ jobs:
             local delay=${SSH_RETRY_DELAY:-10}
             local attempt=1
             while [ $attempt -le $max_attempts ]; do
-              if ssh_with_opts "$@"; then
-                return 0
-              fi
+              ssh_with_opts "$@" && return 0
               local exit_code=$?
               if [ $exit_code -ne 255 ]; then
                 return $exit_code
@@ -167,9 +165,7 @@ jobs:
             local delay=${SSH_RETRY_DELAY:-10}
             local attempt=1
             while [ $attempt -le $max_attempts ]; do
-              if scp -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-30} "$@"; then
-                return 0
-              fi
+              scp -o ConnectTimeout=${SSH_CONNECT_TIMEOUT:-30} "$@" && return 0
               local exit_code=$?
               if [ $exit_code -ne 255 ]; then
                 return $exit_code

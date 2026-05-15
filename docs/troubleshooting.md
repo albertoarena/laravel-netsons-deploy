@@ -20,7 +20,7 @@ Ensure your `ssh-port` input or `SSH_PORT` variable is set to `65100`.
 
 ### Intermittent SSH timeouts during deployment
 
-Shared hosting servers can occasionally be slow to accept SSH connections. Since **v1.10.0**, all SSH and SCP commands in the deploy workflow include automatic retry logic:
+Shared hosting servers can occasionally be slow to accept SSH connections. Since **v1.10.0** (fixed in **v1.11.2**), all SSH and SCP commands in the deploy workflow include automatic retry logic:
 
 - Up to **3 retries** (configurable via `ssh.retries` in config)
 - **10-second delay** between retries (configurable via `ssh.retry_delay`)
@@ -42,6 +42,8 @@ If you experience frequent timeouts, you can increase the retry count or delay i
 Then regenerate the workflow: `php artisan netsons:install --force`
 
 Retries are visible in the GitHub Actions log as `::warning::` annotations.
+
+> **Note:** Versions before v1.11.2 had a bug where retries never fired due to incorrect exit code capture. If you're on an earlier version, regenerate the workflow with `php artisan netsons:install --force` after updating.
 
 ### "Host key verification failed"
 

@@ -42,6 +42,10 @@ Then regenerate the workflow: `php artisan netsons:install --force`
 
 Retries are visible in the GitHub Actions log as warning annotations.
 
+:::note
+Versions before v1.11.2 had a bug where retries never fired due to incorrect exit code capture. If you're on an earlier version, regenerate the workflow with `php artisan netsons:install --force` after updating.
+:::
+
 ### "Host key verification failed"
 
 Regenerate your known hosts entry:
