@@ -454,9 +454,11 @@ class InstallCommand extends Command
         $stubPath = __DIR__.'/../../stubs/workflows/deploy.yml.stub';
 
         if (File::exists($workflowPath) && ! $this->option('force')) {
-            info('Workflow .github/workflows/deploy.yml already exists (use --force to overwrite).');
+            if (! $this->input->isInteractive() || ! confirm('Workflow .github/workflows/deploy.yml already exists. Overwrite?', true)) {
+                info('Keeping existing workflow file.');
 
-            return;
+                return;
+            }
         }
 
         if (! File::exists($stubPath)) {

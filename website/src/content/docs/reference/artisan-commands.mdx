@@ -18,7 +18,7 @@ php artisan netsons:install [--strategy=ftp|git] [--force]
 | Option | Description |
 |---|---|
 | `--strategy=ftp\|git` | Set the deployment strategy (skips interactive prompt) |
-| `--force` | Overwrite existing config and workflow files without asking |
+| `--force` | Overwrite existing config and workflow files, skipping all confirmation prompts |
 | `--no-interaction` | Run non-interactively (defaults to FTP if no strategy given) |
 
 ### What it does
@@ -52,7 +52,7 @@ The installer creates `.github/workflows/deploy.yml` from a stub template, repla
 - `%%NOTIFICATIONS%%` — Slack notification steps from `netsons-deploy.json`
 - `%%ENVAUDIT%%` — envaudit validation step from `netsons-deploy.json`
 
-If `.github/workflows/deploy.yml` already exists, it is preserved unless `--force` is used.
+If `.github/workflows/deploy.yml` already exists, the installer will prompt you to confirm overwriting it. In non-interactive mode, the workflow is preserved unless `--force` is used.
 
 ### Switching strategies
 
@@ -67,8 +67,8 @@ This overwrites the config file, regenerates the workflow, and updates the strat
 ### Re-running safely
 
 Without `--force`, the installer will:
-- **Interactive mode** — ask before overwriting an existing config
-- **Non-interactive mode** — skip the config overwrite but still generate the workflow if missing
+- **Interactive mode** — ask before overwriting existing config and workflow files
+- **Non-interactive mode** — skip overwriting existing files but still generate missing ones
 
 When reconfiguring `netsons-deploy.json`, the file is reset to defaults before collecting new values — this prevents stale entries from a previous configuration.
 
@@ -154,8 +154,10 @@ Shows a list of all configured items — env variables (secret-backed, static, b
 After adding or removing variables, regenerate the workflow:
 
 ```bash
-php artisan netsons:install --force
+php artisan netsons:install
 ```
+
+The installer will prompt you to overwrite the existing workflow. Use `--force` to skip confirmation prompts.
 
 ### Examples
 

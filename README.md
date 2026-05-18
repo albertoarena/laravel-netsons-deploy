@@ -114,7 +114,7 @@ Interactive setup wizard. Publishes config and deploy workflow, shows required s
 ```bash
 php artisan netsons:install
 php artisan netsons:install --strategy=git
-php artisan netsons:install --force   # Regenerate workflow with current settings
+php artisan netsons:install --force   # Skip all confirmation prompts
 ```
 
 ### `netsons:check`
@@ -143,8 +143,10 @@ Variable types:
 After adding/removing variables, regenerate the workflow:
 
 ```bash
-php artisan netsons:install --force
+php artisan netsons:install
 ```
+
+The installer will prompt you to overwrite the existing workflow. Use `--force` to skip confirmation prompts.
 
 ## Configuration
 

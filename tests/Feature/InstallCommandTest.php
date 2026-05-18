@@ -165,12 +165,13 @@ describe('netsons:install', function () {
         expect($contents)->not->toContain('%%');
     });
 
-    it('does not overwrite existing workflow without --force', function () {
+    it('does not overwrite existing workflow without --force in non-interactive mode', function () {
         // Create a custom workflow
         File::ensureDirectoryExists(dirname($this->workflowPath));
         File::put($this->workflowPath, 'custom workflow content');
 
         $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->expectsOutputToContain('Keeping existing workflow file.')
             ->assertSuccessful();
 
         $contents = File::get($this->workflowPath);
