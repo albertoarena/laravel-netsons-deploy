@@ -6,6 +6,7 @@ namespace AlbertoArena\NetsonsDeploy\Commands;
 
 use AlbertoArena\NetsonsDeploy\Services\DeployConfigManager;
 use AlbertoArena\NetsonsDeploy\Services\EnvManager;
+use AlbertoArena\NetsonsDeploy\Services\HtaccessGenerator;
 use AlbertoArena\NetsonsDeploy\Strategies\FtpStrategy;
 use AlbertoArena\NetsonsDeploy\Strategies\GitStrategy;
 use Illuminate\Console\Command;
@@ -482,7 +483,7 @@ class InstallCommand extends Command
         $contents = str_replace('%%NODE_VERSION%%', '22', $contents);
         $contents = str_replace('%%PACKAGE_MANAGER%%', 'yarn', $contents);
         $contents = str_replace('%%REMOTE_PHP%%', $config['php_binary'] ?? '/usr/local/bin/ea-php84', $contents);
-        $contents = str_replace('%%REMOTE_COMPOSER%%', $config['composer_binary'] ?? '/opt/cpanel/composer/bin/composer', $contents);
+        $contents = str_replace('%%REMOTE_COMPOSER%%', $config['composer_binary'] ?? '/usr/local/bin/composer', $contents);
         $contents = str_replace('%%RELEASES_KEEP%%', (string) ($config['releases']['keep'] ?? 5), $contents);
 
         // SSH retry settings
@@ -517,6 +518,13 @@ class InstallCommand extends Command
         $contents = str_replace(
             '%%CUSTOM_COMMANDS%%',
             $this->generateCustomCommandsBlock($deployConfig['custom_commands']),
+            $contents
+        );
+
+        // Root .htaccess — HtaccessGenerator is the single source of truth
+        $contents = str_replace(
+            '%%ROOT_HTACCESS%%',
+            $this->generateRootHtaccessBlock(new HtaccessGenerator),
             $contents
         );
 
@@ -561,6 +569,23 @@ class InstallCommand extends Command
         }
 
         return 'releases/${{ steps.release.outputs.dir }}/';
+    }
+
+    /**
+     * Render the root .htaccess as the body of the workflow's remote heredoc.
+     *
+     * The heredoc sits inside a YAML block scalar whose base indentation is 10
+     * spaces, so every line is indented to match. YAML strips that base indent,
+     * leaving the heredoc body (and its unindented terminator) intact.
+     */
+    protected function generateRootHtaccessBlock(HtaccessGenerator $generator): string
+    {
+        $lines = preg_split('/\R/', $generator->generateRoot()) ?: [];
+
+        return implode("\n", array_map(
+            fn (string $line): string => $line === '' ? '' : '          '.$line,
+            $lines
+        ));
     }
 
     protected function generateBuildEnvBlock(array $buildEnv): string

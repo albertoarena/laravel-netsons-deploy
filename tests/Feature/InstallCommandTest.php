@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use AlbertoArena\NetsonsDeploy\Services\HtaccessGenerator;
 use Illuminate\Support\Facades\File;
 
 beforeEach(function () {
@@ -731,5 +732,48 @@ describe('netsons:install workflow features', function () {
         $contents = File::get($this->workflowPath);
         expect($contents)->toContain('public/.htaccess');
         expect($contents)->toContain('DEPLOY_BASE}/public/.htaccess');
+    });
+
+    // A2: Composer path fallback must match the documented Netsons default
+    it('falls back to /usr/local/bin/composer when composer_binary is unset', function () {
+        config(['netsons-deploy.composer_binary' => null]);
+
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->toContain("REMOTE_COMPOSER: '/usr/local/bin/composer'");
+    });
+
+    it('never references the cPanel composer path in the generated workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'git', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        expect($contents)->not->toContain('/opt/cpanel/');
+    });
+
+    // D2: HtaccessGenerator is the single source of truth for the root .htaccess
+    it('builds the root htaccess from HtaccessGenerator', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        $contents = File::get($this->workflowPath);
+        $generated = (new HtaccessGenerator)->generateRoot();
+
+        foreach (preg_split('/\R/', $generated) as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+            expect($contents)->toContain($line);
+        }
+    });
+
+    it('leaves no unreplaced htaccess placeholder in the generated workflow', function () {
+        $this->artisan('netsons:install', ['--strategy' => 'ftp', '--no-interaction' => true])
+            ->assertSuccessful();
+
+        expect(File::get($this->workflowPath))->not->toContain('%%ROOT_HTACCESS%%');
     });
 });

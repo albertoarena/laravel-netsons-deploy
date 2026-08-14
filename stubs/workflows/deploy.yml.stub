@@ -31,7 +31,7 @@ env:
   NODE_VERSION: '%%NODE_VERSION%%' # e.g. 22
   PACKAGE_MANAGER: '%%PACKAGE_MANAGER%%' # npm or yarn
   REMOTE_PHP: '%%REMOTE_PHP%%'   # e.g. /usr/local/bin/ea-php84
-  REMOTE_COMPOSER: '%%REMOTE_COMPOSER%%' # e.g. /opt/cpanel/composer/bin/composer
+  REMOTE_COMPOSER: '%%REMOTE_COMPOSER%%' # e.g. /usr/local/bin/composer
   SSH_RETRIES: '%%SSH_RETRIES%%'
   SSH_RETRY_DELAY: '%%SSH_RETRY_DELAY%%'
   SSH_CONNECT_TIMEOUT: '%%SSH_CONNECT_TIMEOUT%%'
@@ -363,11 +363,7 @@ jobs:
           source /tmp/ssh-helpers.sh
           ssh_retry -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} bash -s <<'REMOTE'
             cat > ~/${{ vars.DEPLOY_PATH }}/.htaccess <<'HTACCESS'
-          <IfModule mod_rewrite.c>
-              RewriteEngine On
-              RewriteCond %{REQUEST_URI} !^/public/
-              RewriteRule ^(.*)$ public/$1 [L]
-          </IfModule>
+%%ROOT_HTACCESS%%
           HTACCESS
           REMOTE
 

@@ -14,11 +14,18 @@ This package has two faces:
 1. **Composer Package** — installed via `composer require albertoarena/laravel-netsons-deploy --dev`. Provides:
    - `php artisan netsons:install` — interactive setup, publishes config + generates `.github/workflows/deploy.yml`
    - `php artisan netsons:check` — shows local config, checks workflow file exists, lists required GitHub Secrets/Variables
-   - Config file `config/netsons-deploy.php`
-   - Publishable GitHub Actions workflow templates (`stubs/workflows/`)
-   - Publishable `.htaccess` stubs for root and public directories
+   - `php artisan netsons:env` — manage deployment env variables in `netsons-deploy.json`
+   - Config file `config/netsons-deploy.php` (the only publishable asset, tag `netsons-deploy-config`)
+   - Workflow templates in `stubs/workflows/` — **not** publishable; `netsons:install` reads them, substitutes `%%PLACEHOLDERS%%`, and writes `.github/workflows/deploy.yml`
 
-2. **Reusable GitHub Action** — usable as `albertoarena/laravel-netsons-deploy@v1` in any workflow. Accepts inputs for strategy (`ftp` or `git`), PHP version, Node version, etc. Internally delegates to shell scripts in `scripts/`.
+2. **Reusable GitHub Action** — usable as `albertoarena/laravel-netsons-deploy@v1` in any workflow. Accepts inputs for strategy (`ftp` or `git`), PHP version, Node version, etc. All deploy logic is inline in `action.yml`.
+
+### Single source of truth
+
+Deployment logic must exist in exactly one place per consumer. Do not add publishable copies of workflow, script, or `.htaccess` content — unreferenced copies silently drift and reintroduce fixed bugs (see `docs/plans/completed/remove-dead-stubs-and-publish-tags.md`).
+
+- Root `.htaccess` rules live in `HtaccessGenerator` and reach the workflow via the `%%ROOT_HTACCESS%%` placeholder
+- `action.yml` keeps its own inline copy of the root `.htaccess` — unavoidable, since a composite action cannot call PHP. Change both together.
 
 ## Netsons Hosting Constraints
 
@@ -78,50 +85,49 @@ These constraints apply to ALL Netsons shared hosting plans (cPanel-based):
 │   ├── git-strategy.md          # Git deployment guide
 │   ├── netsons-setup.md         # Netsons cPanel SSH/FTP setup guide
 │   ├── github-secrets.md        # Required GitHub secrets/variables
-│   └── troubleshooting.md       # Common issues and fixes
+│   ├── troubleshooting.md       # Common issues and fixes
+│   └── plans/                   # Implementation plans
+│       └── completed/           # Plans whose work has shipped
 ├── config/
-│   └── netsons-deploy.php       # Publishable config
+│   └── netsons-deploy.php       # Publishable config (only publishable asset)
 ├── src/
 │   ├── NetsonsDeployServiceProvider.php
 │   ├── Commands/
 │   │   ├── InstallCommand.php   # netsons:install
-│   │   └── CheckCommand.php     # netsons:check
+│   │   ├── CheckCommand.php     # netsons:check
+│   │   └── EnvCommand.php       # netsons:env
 │   ├── Strategies/
 │   │   ├── DeployStrategyInterface.php
 │   │   ├── FtpStrategy.php
 │   │   └── GitStrategy.php
-│   ├── Services/
-│   │   ├── HtaccessGenerator.php
-│   │   ├── ProxyIndexGenerator.php
-│   │   ├── EnvManager.php
-│   │   └── ReleaseManager.php
-│   └── Stubs/                   # Embedded stubs (fallback)
+│   └── Services/
+│       ├── DeployConfigManager.php  # Reads/writes netsons-deploy.json
+│       ├── HtaccessGenerator.php    # Source of truth for .htaccess rules
+│       ├── ProxyIndexGenerator.php
+│       ├── EnvManager.php
+│       └── ReleaseManager.php
 ├── stubs/
-│   ├── workflows/
-│   │   ├── deploy.yml.stub      # Main deploy workflow template
-│   │   └── test.yml.stub        # Test workflow template (optional)
-│   ├── htaccess/
-│   │   ├── root.stub            # Root .htaccess (rewrite to public/)
-│   │   └── public.stub          # Public .htaccess (Laravel rewrite rules)
-│   └── scripts/
-│       ├── deploy-ftp.sh        # FTP deploy orchestration
-│       ├── deploy-git.sh        # Git deploy orchestration
-│       ├── post-deploy.sh       # Shared post-deploy steps
-│       ├── setup-ssh.sh         # SSH key setup
-│       ├── switch-release.sh    # Release activation
-│       └── cleanup-releases.sh  # Old release pruning
+│   └── workflows/
+│       ├── deploy.yml.stub      # Main deploy workflow template
+│       └── test.yml.stub        # Test workflow template (optional)
 ├── action.yml                   # GitHub Action definition
 └── tests/
     ├── TestCase.php
+    ├── Pest.php
     ├── Unit/
+    │   ├── ConfigTest.php
+    │   ├── DeployConfigManagerTest.php
+    │   ├── EnvManagerTest.php
     │   ├── HtaccessGeneratorTest.php
     │   ├── ProxyIndexGeneratorTest.php
-    │   ├── EnvManagerTest.php
     │   ├── ReleaseManagerTest.php
-    │   └── ConfigTest.php
+    │   ├── ServiceProviderTest.php   # Publish tags + shipped stub dirs
+    │   ├── SshRetryHelpersTest.php   # Executes ssh_retry/scp_retry in bash
+    │   └── StrategyTest.php
     └── Feature/
-        ├── InstallCommandTest.php
-        └── CheckCommandTest.php
+        ├── CheckCommandTest.php
+        ├── EnvCommandTest.php
+        └── InstallCommandTest.php
 ```
 
 ## Coding Standards
